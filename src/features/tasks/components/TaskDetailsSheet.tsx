@@ -35,7 +35,7 @@ export function TaskDetailsSheet({
     return null;
   }
 
-  const completed =
+  const isCompleted =
     task.status === 'completed';
 
   return (
@@ -44,13 +44,19 @@ export function TaskDetailsSheet({
       transparent
       animationType="slide"
       onRequestClose={onClose}>
-      <View style={styles.overlay}>
+      <View style={styles.container}>
+        {/* Backdrop */}
+
         <Pressable
           style={styles.backdrop}
           onPress={onClose}
         />
 
+        {/* Bottom Sheet */}
+
         <View style={styles.sheet}>
+          {/* Handle */}
+
           <View style={styles.handle} />
 
           {/* Header */}
@@ -62,71 +68,80 @@ export function TaskDetailsSheet({
 
             <Pressable
               onPress={onClose}
-              style={styles.closeButton}>
+              style={styles.closeButton}
+              accessibilityRole="button"
+              accessibilityLabel="Close task details">
               <Text style={styles.closeText}>
                 ×
               </Text>
             </Pressable>
           </View>
 
-          {/* Task */}
+          {/* Task Information */}
 
-          <View style={styles.taskSection}>
+          <View style={styles.taskRow}>
             <View
               style={[
-                styles.statusIcon,
-                completed &&
-                  styles.statusIconCompleted,
+                styles.statusCircle,
+                isCompleted &&
+                  styles.statusCircleCompleted,
               ]}>
-              <Text
-                style={[
-                  styles.statusIconText,
-                  completed &&
-                    styles.statusIconTextCompleted,
-                ]}>
-                {completed ? '✓' : ''}
-              </Text>
+              {isCompleted && (
+                <Text
+                  style={
+                    styles.checkmark
+                  }>
+                  ✓
+                </Text>
+              )}
             </View>
 
-            <View style={styles.taskContent}>
+            <View
+              style={styles.taskContent}>
               <Text
                 style={[
-                  styles.title,
-                  completed &&
+                  styles.taskTitle,
+                  isCompleted &&
                     styles.completedTitle,
                 ]}>
                 {task.title}
               </Text>
 
               {task.description ? (
-                <Text style={styles.description}>
+                <Text
+                  style={styles.description}>
                   {task.description}
                 </Text>
               ) : (
                 <Text
-                  style={styles.noDescription}>
+                  style={styles.emptyDescription}>
                   No description added.
                 </Text>
               )}
             </View>
           </View>
 
-          {/* Metadata */}
+          {/* Task Metadata */}
 
-          <View style={styles.metadata}>
-            <InfoItem
+          <View style={styles.metadataCard}>
+            <MetadataItem
               label="DUE DATE"
               value={task.dueDate}
             />
 
             {task.dueTime ? (
-              <InfoItem
+              <MetadataItem
                 label="TIME"
                 value={task.dueTime}
               />
-            ) : null}
+            ) : (
+              <MetadataItem
+                label="TIME"
+                value="Not set"
+              />
+            )}
 
-            <InfoItem
+            <MetadataItem
               label="PRIORITY"
               value={capitalize(
                 task.priority,
@@ -138,41 +153,56 @@ export function TaskDetailsSheet({
           {/* Actions */}
 
           <View style={styles.actions}>
+            {/* Complete */}
+
             <Pressable
               onPress={() =>
                 onToggle(task)
               }
               style={[
                 styles.primaryButton,
-                completed &&
-                  styles.secondaryButton,
-              ]}>
+                isCompleted &&
+                  styles.completedButton,
+              ]}
+              accessibilityRole="button">
               <Text
                 style={[
                   styles.primaryButtonText,
-                  completed &&
-                    styles.secondaryButtonText,
+                  isCompleted &&
+                    styles.completedButtonText,
                 ]}>
-                {completed
+                {isCompleted
                   ? 'Mark as incomplete'
                   : 'Mark as complete'}
               </Text>
             </Pressable>
 
+            {/* Edit */}
+
             <Pressable
-              onPress={() => onEdit(task)}
-              style={styles.outlineButton}>
+              onPress={() =>
+                onEdit(task)
+              }
+              style={styles.secondaryButton}
+              accessibilityRole="button">
               <Text
-                style={styles.outlineButtonText}>
+                style={
+                  styles.secondaryButtonText
+                }>
                 Edit task
               </Text>
             </Pressable>
 
+            {/* Delete */}
+
             <Pressable
-              onPress={() => onDelete(task)}
-              style={styles.deleteButton}>
+              onPress={() =>
+                onDelete(task)
+              }
+              style={styles.deleteButton}
+              accessibilityRole="button">
               <Text
-                style={styles.deleteButtonText}>
+                style={styles.deleteText}>
                 Delete task
               </Text>
             </Pressable>
@@ -183,39 +213,65 @@ export function TaskDetailsSheet({
   );
 }
 
-function InfoItem({
-  label,
-  value,
-  priority,
-}: {
+/* ================================================= */
+/* METADATA ITEM                                     */
+/* ================================================= */
+
+interface MetadataItemProps {
   label: string;
   value: string;
   priority?: Task['priority'];
-}) {
+}
+
+function MetadataItem({
+  label,
+  value,
+  priority,
+}: MetadataItemProps) {
   return (
-    <View style={styles.infoItem}>
-      <Text style={styles.infoLabel}>
+    <View style={styles.metadataItem}>
+      <Text style={styles.metadataLabel}>
         {label}
       </Text>
 
-      <View style={styles.infoValueRow}>
-        {priority ? (
+      <View
+        style={styles.metadataValueRow}>
+        {priority && (
           <View
             style={[
               styles.priorityDot,
               {
                 backgroundColor:
-                  getPriorityColor(priority),
+                  getPriorityColor(
+                    priority,
+                  ),
               },
             ]}
           />
-        ) : null}
+        )}
 
-        <Text style={styles.infoValue}>
+        <Text
+          numberOfLines={1}
+          style={styles.metadataValue}>
           {value}
         </Text>
       </View>
     </View>
+  );
+}
+
+/* ================================================= */
+/* HELPERS                                           */
+/* ================================================= */
+
+function capitalize(value: string) {
+  if (!value) {
+    return '';
+  }
+
+  return (
+    value.charAt(0).toUpperCase() +
+    value.slice(1)
   );
 }
 
@@ -229,20 +285,18 @@ function getPriorityColor(
     case 'medium':
       return lightTheme.colors.warning;
 
+    case 'low':
     default:
       return lightTheme.colors.success;
   }
 }
 
-function capitalize(value: string) {
-  return (
-    value.charAt(0).toUpperCase() +
-    value.slice(1)
-  );
-}
+/* ================================================= */
+/* STYLES                                            */
+/* ================================================= */
 
 const styles = StyleSheet.create({
-  overlay: {
+  container: {
     flex: 1,
 
     justifyContent: 'flex-end',
@@ -252,7 +306,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
 
     backgroundColor:
-      'rgba(15, 18, 25, 0.45)',
+      'rgba(15, 18, 25, 0.50)',
   },
 
   sheet: {
@@ -260,17 +314,28 @@ const styles = StyleSheet.create({
       lightTheme.colors.background,
 
     borderTopLeftRadius: 28,
+
     borderTopRightRadius: 28,
 
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal:
+      spacing.xl,
+
     paddingTop: spacing.md,
-    paddingBottom: 36,
+
+    paddingBottom: 34,
+
+    /*
+     * Prevent the sheet from becoming
+     * too tall on smaller devices.
+     */
+    maxHeight: '88%',
   },
 
   handle: {
     alignSelf: 'center',
 
-    width: 40,
+    width: 42,
+
     height: 4,
 
     borderRadius: 2,
@@ -281,6 +346,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
 
+  /* ========================= */
+  /* HEADER */
+  /* ========================= */
+
   header: {
     flexDirection: 'row',
 
@@ -289,7 +358,8 @@ const styles = StyleSheet.create({
     justifyContent:
       'space-between',
 
-    marginBottom: spacing.xxl,
+    marginBottom:
+      spacing.xxl,
   },
 
   headerTitle: {
@@ -300,12 +370,14 @@ const styles = StyleSheet.create({
   },
 
   closeButton: {
-    width: 38,
-    height: 38,
+    width: 40,
 
-    borderRadius: 19,
+    height: 40,
+
+    borderRadius: 20,
 
     alignItems: 'center',
+
     justifyContent: 'center',
 
     backgroundColor:
@@ -318,25 +390,33 @@ const styles = StyleSheet.create({
   },
 
   closeText: {
-    fontSize: 25,
+    fontSize: 26,
 
-    lineHeight: 27,
+    lineHeight: 28,
+
+    fontWeight: '300',
 
     color:
       lightTheme.colors.textSecondary,
   },
 
-  taskSection: {
+  /* ========================= */
+  /* TASK */
+  /* ========================= */
+
+  taskRow: {
     flexDirection: 'row',
 
-    marginBottom: spacing.xxl,
+    marginBottom:
+      spacing.xxl,
   },
 
-  statusIcon: {
-    width: 30,
-    height: 30,
+  statusCircle: {
+    width: 32,
 
-    borderRadius: 15,
+    height: 32,
+
+    borderRadius: 16,
 
     borderWidth: 1.5,
 
@@ -344,14 +424,15 @@ const styles = StyleSheet.create({
       lightTheme.colors.border,
 
     alignItems: 'center',
+
     justifyContent: 'center',
 
-    marginRight: spacing.md,
-
     marginTop: 2,
+
+    marginRight: spacing.md,
   },
 
-  statusIconCompleted: {
+  statusCircleCompleted: {
     backgroundColor:
       lightTheme.colors.primary,
 
@@ -359,28 +440,25 @@ const styles = StyleSheet.create({
       lightTheme.colors.primary,
   },
 
-  statusIconText: {
-    color:
-      lightTheme.colors.textMuted,
+  checkmark: {
+    color: '#FFFFFF',
 
-    fontSize: 16,
+    fontSize: 17,
 
     fontWeight: '700',
-  },
-
-  statusIconTextCompleted: {
-    color: '#FFFFFF',
   },
 
   taskContent: {
     flex: 1,
   },
 
-  title: {
+  taskTitle: {
     ...typography.title,
 
     color:
       lightTheme.colors.text,
+
+    lineHeight: 25,
   },
 
   completedTitle: {
@@ -397,12 +475,12 @@ const styles = StyleSheet.create({
     color:
       lightTheme.colors.textSecondary,
 
-    marginTop: spacing.sm,
+    lineHeight: 22,
 
-    lineHeight: 23,
+    marginTop: spacing.sm,
   },
 
-  noDescription: {
+  emptyDescription: {
     ...typography.body,
 
     color:
@@ -413,7 +491,11 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
 
-  metadata: {
+  /* ========================= */
+  /* METADATA */
+  /* ========================= */
+
+  metadataCard: {
     flexDirection: 'row',
 
     backgroundColor:
@@ -427,16 +509,23 @@ const styles = StyleSheet.create({
     borderRadius:
       lightTheme.radius.lg,
 
-    padding: spacing.lg,
+    paddingHorizontal:
+      spacing.md,
 
-    marginBottom: spacing.xxl,
+    paddingVertical:
+      spacing.lg,
+
+    marginBottom:
+      spacing.xxl,
   },
 
-  infoItem: {
+  metadataItem: {
     flex: 1,
+
+    minWidth: 0,
   },
 
-  infoLabel: {
+  metadataLabel: {
     ...typography.caption,
 
     color:
@@ -449,21 +538,26 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
 
-  infoValueRow: {
+  metadataValueRow: {
     flexDirection: 'row',
 
     alignItems: 'center',
+
+    minWidth: 0,
   },
 
-  infoValue: {
+  metadataValue: {
     ...typography.bodyMedium,
 
     color:
       lightTheme.colors.text,
+
+    flexShrink: 1,
   },
 
   priorityDot: {
     width: 7,
+
     height: 7,
 
     borderRadius: 4,
@@ -471,21 +565,26 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
 
+  /* ========================= */
+  /* ACTIONS */
+  /* ========================= */
+
   actions: {
     gap: spacing.md,
   },
 
   primaryButton: {
-    minHeight: 54,
+    height: 54,
 
     borderRadius:
       lightTheme.radius.md,
 
-    alignItems: 'center',
-    justifyContent: 'center',
-
     backgroundColor:
       lightTheme.colors.primary,
+
+    alignItems: 'center',
+
+    justifyContent: 'center',
   },
 
   primaryButtonText: {
@@ -494,7 +593,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 
-  secondaryButton: {
+  completedButton: {
     backgroundColor:
       lightTheme.colors.surface,
 
@@ -504,19 +603,16 @@ const styles = StyleSheet.create({
       lightTheme.colors.primary,
   },
 
-  secondaryButtonText: {
+  completedButtonText: {
     color:
       lightTheme.colors.primary,
   },
 
-  outlineButton: {
-    minHeight: 54,
+  secondaryButton: {
+    height: 54,
 
     borderRadius:
       lightTheme.radius.md,
-
-    alignItems: 'center',
-    justifyContent: 'center',
 
     backgroundColor:
       lightTheme.colors.surface,
@@ -525,9 +621,13 @@ const styles = StyleSheet.create({
 
     borderColor:
       lightTheme.colors.border,
+
+    alignItems: 'center',
+
+    justifyContent: 'center',
   },
 
-  outlineButtonText: {
+  secondaryButtonText: {
     ...typography.button,
 
     color:
@@ -535,13 +635,14 @@ const styles = StyleSheet.create({
   },
 
   deleteButton: {
-    minHeight: 48,
+    height: 46,
 
     alignItems: 'center',
+
     justifyContent: 'center',
   },
 
-  deleteButtonText: {
+  deleteText: {
     ...typography.bodyMedium,
 
     color:

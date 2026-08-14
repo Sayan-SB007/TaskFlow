@@ -126,11 +126,48 @@ const taskSlice = createSlice({
 
       state.items.unshift({
         id: `task-${Date.now()}`,
-        ...action.payload,
+        title: action.payload.title,
+        description: action.payload.description,
+        priority: action.payload.priority,
         status: 'pending',
+        dueDate: action.payload.dueDate,
+        dueTime: action.payload.dueTime,
         createdAt: timestamp,
         updatedAt: timestamp,
       });
+    },
+
+    updateTask: (
+      state,
+      action: PayloadAction<{
+        id: string;
+        title: string;
+        description?: string;
+        priority: TaskPriority;
+        dueDate: string;
+        dueTime?: string;
+      }>,
+    ) => {
+      const task = state.items.find(
+        item => item.id === action.payload.id,
+      );
+
+      if (!task) {
+        return;
+      }
+
+      task.title = action.payload.title;
+      task.description =
+        action.payload.description;
+      task.priority =
+        action.payload.priority;
+      task.dueDate =
+        action.payload.dueDate;
+      task.dueTime =
+        action.payload.dueTime;
+
+      task.updatedAt =
+        new Date().toISOString();
     },
 
     deleteTask: (
@@ -148,6 +185,7 @@ export const {
   setFilter,
   toggleTask,
   addTask,
+  updateTask,
   deleteTask,
 } = taskSlice.actions;
 
