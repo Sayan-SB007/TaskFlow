@@ -1,4 +1,8 @@
-import {createSlice, PayloadAction} from '@reduxjs/toolkit';
+import {
+  createAsyncThunk,
+  createSlice,
+  PayloadAction,
+} from '@reduxjs/toolkit';
 
 import type {
   Task,
@@ -6,78 +10,226 @@ import type {
   TaskPriority,
 } from './types';
 
+import {taskService} from './taskService';
+
 interface TaskState {
   items: Task[];
+
   filter: TaskFilter;
-  status: 'idle' | 'loading' | 'success' | 'error';
+
+  status:
+    | 'idle'
+    | 'loading'
+    | 'success'
+    | 'error';
+
+  operation:
+    | 'load'
+    | 'create'
+    | 'update'
+    | 'toggle'
+    | 'delete'
+    | null;
+
   error: string | null;
 }
 
-const now = new Date().toISOString();
+interface TaskPayload {
+  title: string;
+  description?: string;
+  priority: TaskPriority;
+  dueDate: string;
+  dueTime?: string;
+}
+
+/* ================================================= */
+/* LOAD TASKS                                        */
+/* ================================================= */
+
+export const loadTasks = createAsyncThunk(
+  'tasks/loadTasks',
+  async (_, {rejectWithValue}) => {
+    try {
+      return await taskService.getTasks();
+    } catch (error) {
+      return rejectWithValue(
+        getErrorMessage(error),
+      );
+    }
+  },
+);
+
+/* ================================================= */
+/* ADD TASK                                          */
+/* ================================================= */
+
+export const addTask = createAsyncThunk(
+  'tasks/addTask',
+  async (
+    payload: TaskPayload,
+    {rejectWithValue},
+  ) => {
+    try {
+      const timestamp =
+        new Date().toISOString();
+
+      const task: Task = {
+        id: `task-${Date.now()}`,
+
+        title: payload.title.trim(),
+
+        description:
+          payload.description?.trim(),
+
+        priority: payload.priority,
+
+        status: 'pending',
+
+        dueDate: payload.dueDate,
+
+        dueTime: payload.dueTime,
+
+        createdAt: timestamp,
+
+        updatedAt: timestamp,
+      };
+
+      return await taskService.createTask(
+        task,
+      );
+    } catch (error) {
+      return rejectWithValue(
+        getErrorMessage(error),
+      );
+    }
+  },
+);
+
+/* ================================================= */
+/* UPDATE TASK                                       */
+/* ================================================= */
+
+export const updateTask = createAsyncThunk(
+  'tasks/updateTask',
+  async (
+    payload: TaskPayload & {
+      id: string;
+    },
+    {rejectWithValue},
+  ) => {
+    try {
+      const existing =
+        await taskService.getTaskById(
+          payload.id,
+        );
+
+      if (!existing) {
+        throw new Error(
+          'Task could not be found.',
+        );
+      }
+
+      const task: Task = {
+        ...existing,
+
+        title: payload.title.trim(),
+
+        description:
+          payload.description?.trim(),
+
+        priority: payload.priority,
+
+        dueDate: payload.dueDate,
+
+        dueTime: payload.dueTime,
+
+        updatedAt:
+          new Date().toISOString(),
+      };
+
+      return await taskService.updateTask(
+        task,
+      );
+    } catch (error) {
+      return rejectWithValue(
+        getErrorMessage(error),
+      );
+    }
+  },
+);
+
+/* ================================================= */
+/* TOGGLE TASK                                       */
+/* ================================================= */
+
+export const toggleTask = createAsyncThunk(
+  'tasks/toggleTask',
+  async (
+    id: string,
+    {rejectWithValue},
+  ) => {
+    try {
+      const task =
+        await taskService.getTaskById(id);
+
+      if (!task) {
+        throw new Error(
+          'Task could not be found.',
+        );
+      }
+
+      return await taskService.toggleTask(
+        task,
+      );
+    } catch (error) {
+      return rejectWithValue(
+        getErrorMessage(error),
+      );
+    }
+  },
+);
+
+/* ================================================= */
+/* DELETE TASK                                       */
+/* ================================================= */
+
+export const deleteTask = createAsyncThunk(
+  'tasks/deleteTask',
+  async (
+    id: string,
+    {rejectWithValue},
+  ) => {
+    try {
+      await taskService.deleteTask(id);
+
+      return id;
+    } catch (error) {
+      return rejectWithValue(
+        getErrorMessage(error),
+      );
+    }
+  },
+);
+
+/* ================================================= */
+/* INITIAL STATE                                     */
+/* ================================================= */
 
 const initialState: TaskState = {
-  items: [
-    {
-      id: 'task-1',
-      title: 'Complete React Native assignment',
-      description:
-        'Finish the offline-first architecture and polish the UI.',
-      priority: 'high',
-      status: 'pending',
-      dueDate: 'Today',
-      dueTime: '10:30 AM',
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: 'task-2',
-      title: 'Review project architecture',
-      description:
-        'Review navigation, state management and folder structure.',
-      priority: 'medium',
-      status: 'pending',
-      dueDate: 'Tomorrow',
-      dueTime: '2:00 PM',
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: 'task-3',
-      title: 'Setup React Native project',
-      priority: 'low',
-      status: 'completed',
-      dueDate: 'Yesterday',
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: 'task-4',
-      title: 'Prepare technical documentation',
-      description:
-        'Document architecture decisions and known limitations.',
-      priority: 'medium',
-      status: 'pending',
-      dueDate: 'Friday',
-      dueTime: '5:00 PM',
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      id: 'task-5',
-      title: 'Record Loom walkthrough',
-      priority: 'low',
-      status: 'pending',
-      dueDate: 'Friday',
-      dueTime: '7:00 PM',
-      createdAt: now,
-      updatedAt: now,
-    },
-  ],
+  items: [],
 
   filter: 'all',
-  status: 'success',
+
+  status: 'idle',
+
+  operation: null,
+
   error: null,
 };
+
+/* ================================================= */
+/* SLICE                                             */
+/* ================================================= */
 
 const taskSlice = createSlice({
   name: 'tasks',
@@ -92,101 +244,264 @@ const taskSlice = createSlice({
       state.filter = action.payload;
     },
 
-    toggleTask: (
-      state,
-      action: PayloadAction<string>,
-    ) => {
-      const task = state.items.find(
-        item => item.id === action.payload,
-      );
-
-      if (!task) {
-        return;
-      }
-
-      task.status =
-        task.status === 'completed'
-          ? 'pending'
-          : 'completed';
-
-      task.updatedAt = new Date().toISOString();
+    clearTaskError: state => {
+      state.error = null;
     },
+  },
 
-    addTask: (
-      state,
-      action: PayloadAction<{
-        title: string;
-        description?: string;
-        priority: TaskPriority;
-        dueDate: string;
-        dueTime?: string;
-      }>,
-    ) => {
-      const timestamp = new Date().toISOString();
+  extraReducers: builder => {
+    /* --------------------------------------------- */
+    /* LOAD                                           */
+    /* --------------------------------------------- */
 
-      state.items.unshift({
-        id: `task-${Date.now()}`,
-        title: action.payload.title,
-        description: action.payload.description,
-        priority: action.payload.priority,
-        status: 'pending',
-        dueDate: action.payload.dueDate,
-        dueTime: action.payload.dueTime,
-        createdAt: timestamp,
-        updatedAt: timestamp,
-      });
-    },
+    builder.addCase(
+      loadTasks.pending,
+      state => {
+        state.status = 'loading';
 
-    updateTask: (
-      state,
-      action: PayloadAction<{
-        id: string;
-        title: string;
-        description?: string;
-        priority: TaskPriority;
-        dueDate: string;
-        dueTime?: string;
-      }>,
-    ) => {
-      const task = state.items.find(
-        item => item.id === action.payload.id,
-      );
+        state.operation = 'load';
 
-      if (!task) {
-        return;
-      }
+        state.error = null;
+      },
+    );
 
-      task.title = action.payload.title;
-      task.description =
-        action.payload.description;
-      task.priority =
-        action.payload.priority;
-      task.dueDate =
-        action.payload.dueDate;
-      task.dueTime =
-        action.payload.dueTime;
+    builder.addCase(
+      loadTasks.fulfilled,
+      (state, action) => {
+        state.items = action.payload;
 
-      task.updatedAt =
-        new Date().toISOString();
-    },
+        state.status = 'success';
 
-    deleteTask: (
-      state,
-      action: PayloadAction<string>,
-    ) => {
-      state.items = state.items.filter(
-        task => task.id !== action.payload,
-      );
-    },
+        state.operation = null;
+
+        state.error = null;
+      },
+    );
+
+    builder.addCase(
+      loadTasks.rejected,
+      (state, action) => {
+        state.status = 'error';
+
+        state.operation = null;
+
+        state.error =
+          action.payload as string;
+      },
+    );
+
+    /* --------------------------------------------- */
+    /* ADD                                            */
+    /* --------------------------------------------- */
+
+    builder.addCase(
+      addTask.pending,
+      state => {
+        state.status = 'loading';
+
+        state.operation = 'create';
+
+        state.error = null;
+      },
+    );
+
+    builder.addCase(
+      addTask.fulfilled,
+      (state, action) => {
+        state.items.unshift(
+          action.payload,
+        );
+
+        state.status = 'success';
+
+        state.operation = null;
+
+        state.error = null;
+      },
+    );
+
+    builder.addCase(
+      addTask.rejected,
+      (state, action) => {
+        state.status = 'error';
+
+        state.operation = null;
+
+        state.error =
+          action.payload as string;
+      },
+    );
+
+    /* --------------------------------------------- */
+    /* UPDATE                                         */
+    /* --------------------------------------------- */
+
+    builder.addCase(
+      updateTask.pending,
+      state => {
+        state.status = 'loading';
+
+        state.operation = 'update';
+
+        state.error = null;
+      },
+    );
+
+    builder.addCase(
+      updateTask.fulfilled,
+      (state, action) => {
+        const index =
+          state.items.findIndex(
+            item =>
+              item.id ===
+              action.payload.id,
+          );
+
+        if (index !== -1) {
+          state.items[index] =
+            action.payload;
+        }
+
+        state.status = 'success';
+
+        state.operation = null;
+
+        state.error = null;
+      },
+    );
+
+    builder.addCase(
+      updateTask.rejected,
+      (state, action) => {
+        state.status = 'error';
+
+        state.operation = null;
+
+        state.error =
+          action.payload as string;
+      },
+    );
+
+    /* --------------------------------------------- */
+    /* TOGGLE                                         */
+    /* --------------------------------------------- */
+
+    builder.addCase(
+      toggleTask.pending,
+      state => {
+        state.status = 'loading';
+
+        state.operation = 'toggle';
+
+        state.error = null;
+      },
+    );
+
+    builder.addCase(
+      toggleTask.fulfilled,
+      (state, action) => {
+        const index =
+          state.items.findIndex(
+            item =>
+              item.id ===
+              action.payload.id,
+          );
+
+        if (index !== -1) {
+          state.items[index] =
+            action.payload;
+        }
+
+        state.status = 'success';
+
+        state.operation = null;
+      },
+    );
+
+    builder.addCase(
+      toggleTask.rejected,
+      (state, action) => {
+        state.status = 'error';
+
+        state.operation = null;
+
+        state.error =
+          action.payload as string;
+      },
+    );
+
+    /* --------------------------------------------- */
+    /* DELETE                                         */
+    /* --------------------------------------------- */
+
+    builder.addCase(
+      deleteTask.pending,
+      state => {
+        state.status = 'loading';
+
+        state.operation = 'delete';
+
+        state.error = null;
+      },
+    );
+
+    builder.addCase(
+      deleteTask.fulfilled,
+      (state, action) => {
+        state.items =
+          state.items.filter(
+            task =>
+              task.id !==
+              action.payload,
+          );
+
+        state.status = 'success';
+
+        state.operation = null;
+
+        state.error = null;
+      },
+    );
+
+    builder.addCase(
+      deleteTask.rejected,
+      (state, action) => {
+        state.status = 'error';
+
+        state.operation = null;
+
+        state.error =
+          action.payload as string;
+      },
+    );
   },
 });
 
+/* ================================================= */
+/* ACTIONS                                           */
+/* ================================================= */
+
 export const {
   setFilter,
-  toggleTask,
-  addTask,
-  updateTask,
-  deleteTask,
+  clearTaskError,
 } = taskSlice.actions;
 
+/* ================================================= */
+/* REDUCER                                           */
+/* ================================================= */
+
 export default taskSlice.reducer;
+
+/* ================================================= */
+/* ERROR HELPER                                      */
+/* ================================================= */
+
+function getErrorMessage(
+  error: unknown,
+): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return 'Something went wrong while processing the task.';
+}

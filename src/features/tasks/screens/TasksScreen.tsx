@@ -1,9 +1,11 @@
 import React, {
   useCallback,
+  useEffect,
   useState,
 } from 'react';
 
 import {
+  ActivityIndicator,
   FlatList,
   Modal,
   Platform,
@@ -28,6 +30,7 @@ import {
 
 import {
   deleteTask,
+  loadTasks,
   setFilter,
   toggleTask,
 } from '../taskSlice';
@@ -41,10 +44,17 @@ import {TaskCard} from '../components/TaskCard';
 import {ProductivityCard} from '../components/ProductivityCard';
 import {TaskFormSheet} from '../components/TaskFormSheet';
 import {TaskDetailsSheet} from '../components/TaskDetailsSheet';
+
 import {lightTheme} from '../../../theme/lightTheme';
 import {spacing} from '../../../theme/spacing';
 import {typography} from '../../../theme/typography';
 import {shadows} from '../../../theme/shadows';
+
+import {debugTasks} from '../../../database/debug';
+
+/* ================================================= */
+/* FILTERS                                           */
+/* ================================================= */
 
 const FILTERS: {
   label: string;
@@ -64,12 +74,16 @@ const FILTERS: {
   },
 ];
 
+/* ================================================= */
+/* SCREEN                                             */
+/* ================================================= */
+
 export function TasksScreen() {
   const dispatch = useAppDispatch();
 
-  // -----------------------------
-  // UI STATE
-  // -----------------------------
+  /* ================================================= */
+  /* UI STATE                                           */
+  /* ================================================= */
 
   const [formVisible, setFormVisible] =
     useState(false);
@@ -86,9 +100,9 @@ export function TasksScreen() {
   const [taskToDelete, setTaskToDelete] =
     useState<Task | null>(null);
 
-  // -----------------------------
-  // REDUX STATE
-  // -----------------------------
+  /* ================================================= */
+  /* REDUX STATE                                        */
+  /* ================================================= */
 
   const tasks = useAppSelector(
     selectVisibleTasks,
@@ -114,101 +128,182 @@ export function TasksScreen() {
     selectProgress,
   );
 
-  // -----------------------------
-  // TASK ACTIONS
-  // -----------------------------
+  const taskStatus = useAppSelector(
+    state => state.tasks.status,
+  );
+
+  const taskOperation = useAppSelector(
+    state => state.tasks.operation,
+  );
+
+  /* ================================================= */
+  /* DATABASE INITIALIZATION                           */
+  /* ================================================= */
+
+  useEffect(() => {
+    dispatch(loadTasks());
+    debugTasks();
+  }, [dispatch]);
+
+  /* ================================================= */
+  /* LOADING MESSAGE                                   */
+  /* ================================================= */
+
+  const loadingMessage =
+    taskOperation === 'create'
+      ? 'Creating task...'
+      : taskOperation === 'update'
+        ? 'Updating task...'
+        : taskOperation === 'delete'
+          ? 'Deleting task...'
+          : taskOperation === 'toggle'
+            ? 'Updating task...'
+            : 'Loading tasks...';
+
+  /* ================================================= */
+  /* TASK ACTIONS                                      */
+  /* ================================================= */
 
   const handleToggle = useCallback(
     (task: Task) => {
+      if (taskStatus === 'loading') {
+        return;
+      }
+
       dispatch(toggleTask(task.id));
     },
-    [dispatch],
+    [dispatch, taskStatus],
   );
 
   const handleTaskPress = useCallback(
     (task: Task) => {
+      if (taskStatus === 'loading') {
+        return;
+      }
+
       setSelectedTask(task);
+
       setDetailsVisible(true);
     },
-    [],
+    [taskStatus],
   );
 
   const handleFilter = useCallback(
     (value: TaskFilter) => {
+      if (taskStatus === 'loading') {
+        return;
+      }
+
       dispatch(setFilter(value));
     },
-    [dispatch],
+    [dispatch, taskStatus],
   );
 
-  // -----------------------------
-  // CREATE
-  // -----------------------------
+  /* ================================================= */
+  /* CREATE                                             */
+  /* ================================================= */
 
   const handleCreateTask = useCallback(() => {
+    if (taskStatus === 'loading') {
+      return;
+    }
+
     setSelectedTask(null);
+
     setFormVisible(true);
-  }, []);
+  }, [taskStatus]);
 
   const handleCloseForm = useCallback(() => {
-    setFormVisible(false);
-    setSelectedTask(null);
-  }, []);
+    if (taskStatus === 'loading') {
+      return;
+    }
 
-  // -----------------------------
-  // DETAILS
-  // -----------------------------
+    setFormVisible(false);
+
+    setSelectedTask(null);
+  }, [taskStatus]);
+
+  /* ================================================= */
+  /* DETAILS                                            */
+  /* ================================================= */
 
   const handleCloseDetails =
     useCallback(() => {
-      setDetailsVisible(false);
-      setSelectedTask(null);
-    }, []);
+      if (taskStatus === 'loading') {
+        return;
+      }
 
-  // -----------------------------
-  // COMPLETE FROM DETAILS
-  // -----------------------------
+      setDetailsVisible(false);
+
+      setSelectedTask(null);
+    }, [taskStatus]);
+
+  /* ================================================= */
+  /* COMPLETE FROM DETAILS                             */
+  /* ================================================= */
 
   const handleToggleFromDetails =
     useCallback(
       (task: Task) => {
+        if (taskStatus === 'loading') {
+          return;
+        }
+
         dispatch(toggleTask(task.id));
       },
-      [dispatch],
+      [dispatch, taskStatus],
     );
 
-  // -----------------------------
-  // EDIT
-  // -----------------------------
+  /* ================================================= */
+  /* EDIT                                               */
+  /* ================================================= */
 
   const handleEditTask =
-    useCallback((task: Task) => {
-      setDetailsVisible(false);
+    useCallback(
+      (task: Task) => {
+        if (taskStatus === 'loading') {
+          return;
+        }
 
-      setSelectedTask(task);
+        setDetailsVisible(false);
 
-      setFormVisible(true);
-    }, []);
+        setSelectedTask(task);
 
-  // -----------------------------
-  // DELETE REQUEST
-  // -----------------------------
+        setFormVisible(true);
+      },
+      [taskStatus],
+    );
+
+  /* ================================================= */
+  /* DELETE REQUEST                                     */
+  /* ================================================= */
 
   const handleDeleteRequest =
-    useCallback((task: Task) => {
-      setDetailsVisible(false);
+    useCallback(
+      (task: Task) => {
+        if (taskStatus === 'loading') {
+          return;
+        }
 
-      setTaskToDelete(task);
+        setDetailsVisible(false);
 
-      setDeleteVisible(true);
-    }, []);
+        setTaskToDelete(task);
 
-  // -----------------------------
-  // DELETE CONFIRM
-  // -----------------------------
+        setDeleteVisible(true);
+      },
+      [taskStatus],
+    );
+
+  /* ================================================= */
+  /* DELETE CONFIRM                                     */
+  /* ================================================= */
 
   const handleConfirmDelete =
     useCallback(() => {
-      if (!taskToDelete) {
+      if (
+        !taskToDelete ||
+        taskStatus === 'loading'
+      ) {
         return;
       }
 
@@ -223,22 +318,28 @@ export function TasksScreen() {
       setSelectedTask(null);
     }, [
       dispatch,
+      taskStatus,
       taskToDelete,
     ]);
 
-  // -----------------------------
-  // DELETE CANCEL
-  // -----------------------------
+  /* ================================================= */
+  /* DELETE CANCEL                                     */
+  /* ================================================= */
 
   const handleCancelDelete =
     useCallback(() => {
-      setDeleteVisible(false);
-      setTaskToDelete(null);
-    }, []);
+      if (taskStatus === 'loading') {
+        return;
+      }
 
-  // -----------------------------
-  // FLATLIST ITEM
-  // -----------------------------
+      setDeleteVisible(false);
+
+      setTaskToDelete(null);
+    }, [taskStatus]);
+
+  /* ================================================= */
+  /* FLATLIST ITEM                                      */
+  /* ================================================= */
 
   const renderTask = useCallback(
     ({
@@ -260,14 +361,13 @@ export function TasksScreen() {
     ],
   );
 
+  /* ================================================= */
+  /* RENDER                                             */
+  /* ================================================= */
+
   return (
     <View style={styles.safeArea}>
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor={
-          lightTheme.colors.background
-        }
-      />
+      <StatusBar barStyle="dark-content" />
 
       <FlatList
         data={tasks}
@@ -346,7 +446,10 @@ export function TasksScreen() {
 
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="See all tasks">
+                accessibilityLabel="See all tasks"
+                disabled={
+                  taskStatus === 'loading'
+                }>
                 <Text
                   style={styles.seeAll}>
                   See all
@@ -370,6 +473,9 @@ export function TasksScreen() {
                     accessibilityState={{
                       selected: active,
                     }}
+                    disabled={
+                      taskStatus === 'loading'
+                    }
                     onPress={() =>
                       handleFilter(
                         item.value,
@@ -419,7 +525,14 @@ export function TasksScreen() {
 
             <Pressable
               onPress={handleCreateTask}
-              style={styles.emptyButton}>
+              disabled={
+                taskStatus === 'loading'
+              }
+              style={[
+                styles.emptyButton,
+                taskStatus === 'loading' &&
+                  styles.disabledButton,
+              ]}>
               <Text
                 style={
                   styles.emptyButtonText
@@ -431,26 +544,34 @@ export function TasksScreen() {
         }
       />
 
-      {/* ========================= */}
-      {/* FLOATING ACTION BUTTON */}
-      {/* ========================= */}
+      {/* ================================================= */}
+      {/* FLOATING ACTION BUTTON                             */}
+      {/* ================================================= */}
 
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Create new task"
         onPress={handleCreateTask}
+        disabled={
+          taskStatus === 'loading'
+        }
         style={({pressed}) => [
           styles.fab,
-          pressed && styles.fabPressed,
+
+          pressed &&
+            styles.fabPressed,
+
+          taskStatus === 'loading' &&
+            styles.disabledButton,
         ]}>
         <Text style={styles.fabText}>
           +
         </Text>
       </Pressable>
 
-      {/* ========================= */}
-      {/* CREATE / EDIT TASK */}
-      {/* ========================= */}
+      {/* ================================================= */}
+      {/* CREATE / EDIT TASK                                */}
+      {/* ================================================= */}
 
       <TaskFormSheet
         visible={formVisible}
@@ -458,22 +579,22 @@ export function TasksScreen() {
         onClose={handleCloseForm}
       />
 
-      {/* ========================= */}
-      {/* TASK DETAILS */}
-      {/* ========================= */}
+      {/* ================================================= */}
+      {/* TASK DETAILS                                      */}
+      {/* ================================================= */}
 
- <TaskDetailsSheet
-  visible={detailsVisible}
-  task={selectedTask}
-  onClose={handleCloseDetails}
-  onToggle={handleToggleFromDetails}
-  onEdit={handleEditTask}
-  onDelete={handleDeleteRequest}
-/>
+      <TaskDetailsSheet
+        visible={detailsVisible}
+        task={selectedTask}
+        onClose={handleCloseDetails}
+        onToggle={handleToggleFromDetails}
+        onEdit={handleEditTask}
+        onDelete={handleDeleteRequest}
+      />
 
-      {/* ========================= */}
-      {/* DELETE CONFIRMATION */}
-      {/* ========================= */}
+      {/* ================================================= */}
+      {/* DELETE CONFIRMATION                               */}
+      {/* ================================================= */}
 
       <DeleteConfirmation
         visible={deleteVisible}
@@ -481,6 +602,46 @@ export function TasksScreen() {
         onCancel={handleCancelDelete}
         onConfirm={handleConfirmDelete}
       />
+
+      {/* ================================================= */}
+      {/* DATABASE LOADING                                  */}
+      {/* ================================================= */}
+
+      {taskStatus === 'loading' && (
+        <Modal
+          visible
+          transparent
+          animationType="fade"
+          statusBarTranslucent
+          onRequestClose={() => {}}>
+          <View
+            style={styles.loadingOverlay}>
+            <View
+              style={styles.loadingCard}>
+              <ActivityIndicator
+                size="large"
+                color={
+                  lightTheme.colors.primary
+                }
+              />
+
+              <Text
+                style={
+                  styles.loadingTitle
+                }>
+                Please wait
+              </Text>
+
+              <Text
+                style={
+                  styles.loadingText
+                }>
+                {loadingMessage}
+              </Text>
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -508,8 +669,10 @@ function DeleteConfirmation({
       transparent
       animationType="fade"
       onRequestClose={onCancel}>
-      <View style={styles.deleteOverlay}>
-        <View style={styles.deleteDialog}>
+      <View
+        style={styles.deleteOverlay}>
+        <View
+          style={styles.deleteDialog}>
           <View
             style={
               styles.deleteIconContainer
@@ -532,7 +695,8 @@ function DeleteConfirmation({
               : 'This task will be permanently removed.'}
           </Text>
 
-          <View style={styles.deleteActions}>
+          <View
+            style={styles.deleteActions}>
             <Pressable
               onPress={onCancel}
               style={styles.cancelButton}>
@@ -546,7 +710,9 @@ function DeleteConfirmation({
 
             <Pressable
               onPress={onConfirm}
-              style={styles.confirmDeleteButton}>
+              style={
+                styles.confirmDeleteButton
+              }>
               <Text
                 style={
                   styles.confirmDeleteText
@@ -582,10 +748,6 @@ const styles = StyleSheet.create({
     paddingHorizontal:
       spacing.xl,
 
-    /*
-     * Extra bottom space ensures the
-     * last task isn't hidden behind FAB.
-     */
     paddingBottom: 150,
   },
 
@@ -654,9 +816,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
 
     top: 9,
+
     right: 9,
 
     width: 7,
+
     height: 7,
 
     borderRadius: 4,
@@ -752,6 +916,7 @@ const styles = StyleSheet.create({
 
   emptyIconContainer: {
     width: 56,
+
     height: 56,
 
     borderRadius: 28,
@@ -827,6 +992,7 @@ const styles = StyleSheet.create({
     bottom: 34,
 
     width: 58,
+
     height: 58,
 
     borderRadius: 18,
@@ -869,6 +1035,14 @@ const styles = StyleSheet.create({
   },
 
   /* ========================= */
+  /* DISABLED */
+  /* ========================= */
+
+  disabledButton: {
+    opacity: 0.55,
+  },
+
+  /* ========================= */
   /* DELETE DIALOG */
   /* ========================= */
 
@@ -882,7 +1056,8 @@ const styles = StyleSheet.create({
 
     justifyContent: 'center',
 
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal:
+      spacing.xl,
   },
 
   deleteDialog: {
@@ -901,6 +1076,7 @@ const styles = StyleSheet.create({
 
   deleteIconContainer: {
     width: 48,
+
     height: 48,
 
     borderRadius: 24,
@@ -993,5 +1169,60 @@ const styles = StyleSheet.create({
     ...typography.button,
 
     color: '#FFFFFF',
+  },
+
+  /* ========================= */
+  /* LOADING */
+  /* ========================= */
+
+  loadingOverlay: {
+    flex: 1,
+
+    backgroundColor:
+      'rgba(15, 18, 25, 0.35)',
+
+    alignItems: 'center',
+
+    justifyContent: 'center',
+  },
+
+  loadingCard: {
+    minWidth: 190,
+
+    backgroundColor:
+      lightTheme.colors.surface,
+
+    borderRadius:
+      lightTheme.radius.xl,
+
+    paddingVertical:
+      spacing.xl,
+
+    paddingHorizontal:
+      spacing.xxl,
+
+    alignItems: 'center',
+
+    ...shadows.floating,
+  },
+
+  loadingTitle: {
+    ...typography.bodyMedium,
+
+    color:
+      lightTheme.colors.text,
+
+    marginTop: spacing.md,
+  },
+
+  loadingText: {
+    ...typography.caption,
+
+    color:
+      lightTheme.colors.textSecondary,
+
+    marginTop: spacing.xs,
+
+    textAlign: 'center',
   },
 });

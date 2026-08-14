@@ -3,9 +3,8 @@ import {createNativeStackNavigator} from '@react-navigation/native-stack';
 
 import type {AppStackParamList} from './types';
 import SettingsScreen from '../features/settings/screens/SettingsScreen';
-import TaskDetailsScreen from '../features/tasks/screens/TaskDetailsScreen';
 import TaskFormScreen from '../features/tasks/screens/TaskFormScreen';
-import TasksScreen from '../features/tasks/screens/TasksScreen';
+import {TasksScreen} from '../features/tasks/screens/TasksScreen';
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
 
@@ -18,11 +17,6 @@ export function AppNavigator() {
       <Stack.Screen
         name="Tasks"
         component={TasksScreen}
-      />
-
-      <Stack.Screen
-        name="TaskDetails"
-        component={TaskDetailsScreen}
       />
 
       <Stack.Screen
