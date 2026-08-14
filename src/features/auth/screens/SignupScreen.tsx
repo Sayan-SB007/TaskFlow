@@ -16,6 +16,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 
 import {
   createUserWithEmailAndPassword,
+  updateProfile,
 } from 'firebase/auth';
 
 import {firebaseAuth} from '../../../config/firebase';
@@ -23,9 +24,15 @@ import {firebaseAuth} from '../../../config/firebase';
 export default function SignupScreen({
   navigation,
 }: any) {
-  const [email, setEmail] = useState('');
+  const [fullName, setFullName] =
+    useState('');
+
+  const [email, setEmail] =
+    useState('');
+
   const [password, setPassword] =
     useState('');
+
   const [confirmPassword, setConfirmPassword] =
     useState('');
 
@@ -44,7 +51,7 @@ export default function SignupScreen({
     useState('');
 
   /* ================================================= */
-  /* VALIDATION                                        */
+  /* EMAIL VALIDATION                                  */
   /* ================================================= */
 
   const validateEmail = (
@@ -54,6 +61,10 @@ export default function SignupScreen({
       value,
     );
   };
+
+  /* ================================================= */
+  /* PASSWORD RULES                                    */
+  /* ================================================= */
 
   const passwordRules = {
     length: password.length >= 8,
@@ -80,8 +91,29 @@ export default function SignupScreen({
   const handleSignup = async () => {
     setError('');
 
+    const cleanName =
+      fullName.trim();
+
     const cleanEmail =
       email.trim().toLowerCase();
+
+    /* Full name */
+
+    if (!cleanName) {
+      setError(
+        'Please enter your full name.',
+      );
+      return;
+    }
+
+    if (cleanName.length < 2) {
+      setError(
+        'Please enter a valid full name.',
+      );
+      return;
+    }
+
+    /* Email */
 
     if (!cleanEmail) {
       setError(
@@ -97,6 +129,8 @@ export default function SignupScreen({
       return;
     }
 
+    /* Password */
+
     if (!password) {
       setError(
         'Please create a password.',
@@ -110,6 +144,8 @@ export default function SignupScreen({
       );
       return;
     }
+
+    /* Confirm password */
 
     if (!confirmPassword) {
       setError(
@@ -128,19 +164,34 @@ export default function SignupScreen({
     try {
       setLoading(true);
 
-      await createUserWithEmailAndPassword(
-        firebaseAuth,
-        cleanEmail,
-        password,
+      /*
+       * Create Firebase account.
+       */
+      const result =
+        await createUserWithEmailAndPassword(
+          firebaseAuth,
+          cleanEmail,
+          password,
+        );
+
+      /*
+       * Store the user's real name
+       * in Firebase Authentication.
+       */
+      await updateProfile(
+        result.user,
+        {
+          displayName: cleanName,
+        },
       );
 
       /*
-       * Firebase automatically signs the
-       * newly created user in.
+       * Firebase automatically keeps the
+       * newly created user signed in.
        *
-       * RootNavigator will react to the
-       * Firebase auth state and open the
-       * authenticated application.
+       * RootNavigator should react to the
+       * authentication state and open
+       * the authenticated application.
        */
     } catch (error: any) {
       console.log(
@@ -190,7 +241,7 @@ export default function SignupScreen({
   };
 
   /* ================================================= */
-  /* PASSWORD RULE                                     */
+  /* PASSWORD RULE COMPONENT                           */
   /* ================================================= */
 
   const PasswordRule = ({
@@ -204,12 +255,14 @@ export default function SignupScreen({
       <View
         style={[
           styles.ruleIcon,
-          valid && styles.ruleIconValid,
+          valid &&
+            styles.ruleIconValid,
         ]}>
         <Text
           style={[
             styles.ruleIconText,
-            valid && styles.ruleIconTextValid,
+            valid &&
+              styles.ruleIconTextValid,
           ]}>
           {valid ? '✓' : ''}
         </Text>
@@ -218,7 +271,8 @@ export default function SignupScreen({
       <Text
         style={[
           styles.ruleText,
-          valid && styles.ruleTextValid,
+          valid &&
+            styles.ruleTextValid,
         ]}>
         {children}
       </Text>
@@ -235,14 +289,18 @@ export default function SignupScreen({
       edges={['top', 'bottom']}>
 
       <KeyboardAvoidingView
-        style={styles.keyboardContainer}
+        style={
+          styles.keyboardContainer
+        }
         behavior={
           Platform.OS === 'ios'
             ? 'padding'
             : 'height'
         }
         keyboardVerticalOffset={
-          Platform.OS === 'ios' ? 0 : 20
+          Platform.OS === 'ios'
+            ? 0
+            : 20
         }>
 
         <ScrollView
@@ -257,7 +315,9 @@ export default function SignupScreen({
               : 'on-drag'
           }
           automaticallyAdjustKeyboardInsets
-          showsVerticalScrollIndicator={false}>
+          showsVerticalScrollIndicator={
+            false
+          }>
 
           {/* ================================================= */}
           {/* HERO                                               */}
@@ -265,47 +325,75 @@ export default function SignupScreen({
 
           <View style={styles.hero}>
 
-            <View style={styles.heroCircleOne} />
-            <View style={styles.heroCircleTwo} />
+            <View
+              style={
+                styles.heroCircleOne
+              }
+            />
+
+            <View
+              style={
+                styles.heroCircleTwo
+              }
+            />
 
             <Pressable
               onPress={() =>
                 navigation.goBack()
               }
               disabled={loading}
-              style={styles.backButton}>
+              style={
+                styles.backButton
+              }>
 
-              <Text style={styles.backArrow}>
+              <Text
+                style={
+                  styles.backArrow
+                }>
                 ‹
               </Text>
 
-              <Text style={styles.backText}>
+              <Text
+                style={
+                  styles.backText
+                }>
                 Back
               </Text>
 
             </Pressable>
 
-            <View style={styles.brandRow}>
+            <View
+              style={styles.brandRow}>
 
-              <View style={styles.logoBox}>
-                <Text style={styles.logoCheck}>
+              <View
+                style={styles.logoBox}>
+                <Text
+                  style={
+                    styles.logoCheck
+                  }>
                   ✓
                 </Text>
               </View>
 
-              <Text style={styles.brand}>
+              <Text
+                style={styles.brand}>
                 TaskFlow
               </Text>
 
             </View>
 
-            <Text style={styles.heroTitle}>
+            <Text
+              style={styles.heroTitle}>
               Create your account
             </Text>
 
-            <Text style={styles.heroSubtitle}>
-              Organize your work, manage your
-              tasks, and stay productive.
+            <Text
+              style={
+                styles.heroSubtitle
+              }>
+              Organize your work, manage
+              your tasks, and stay
+              productive.
             </Text>
 
           </View>
@@ -316,15 +404,60 @@ export default function SignupScreen({
 
           <View style={styles.card}>
 
+            {/* FULL NAME */}
+
+            <Text style={styles.label}>
+              Full name
+            </Text>
+
+            <View
+              style={
+                styles.inputContainer
+              }>
+
+              <Text
+                style={
+                  styles.inputIcon
+                }>
+                ◉
+              </Text>
+
+              <TextInput
+                style={styles.input}
+                value={fullName}
+                onChangeText={value => {
+                  setFullName(value);
+
+                  if (error) {
+                    setError('');
+                  }
+                }}
+                placeholder="Sayan Biswas"
+                placeholderTextColor="#9CA3AF"
+                autoCapitalize="words"
+                autoCorrect={false}
+                autoComplete="name"
+                editable={!loading}
+                returnKeyType="next"
+              />
+
+            </View>
+
             {/* EMAIL */}
 
             <Text style={styles.label}>
               Email address
             </Text>
 
-            <View style={styles.inputContainer}>
+            <View
+              style={
+                styles.inputContainer
+              }>
 
-              <Text style={styles.inputIcon}>
+              <Text
+                style={
+                  styles.inputIcon
+                }>
                 @
               </Text>
 
@@ -352,19 +485,31 @@ export default function SignupScreen({
 
             {/* PASSWORD */}
 
-            <View style={styles.labelRow}>
+            <View
+              style={styles.labelRow}>
+
               <Text style={styles.label}>
                 Password
               </Text>
 
-              <Text style={styles.required}>
+              <Text
+                style={
+                  styles.required
+                }>
                 Required
               </Text>
+
             </View>
 
-            <View style={styles.inputContainer}>
+            <View
+              style={
+                styles.inputContainer
+              }>
 
-              <Text style={styles.inputIcon}>
+              <Text
+                style={
+                  styles.inputIcon
+                }>
                 •
               </Text>
 
@@ -396,10 +541,15 @@ export default function SignupScreen({
                     value => !value,
                   )
                 }
-                style={styles.showButton}
+                style={
+                  styles.showButton
+                }
                 disabled={loading}>
 
-                <Text style={styles.showText}>
+                <Text
+                  style={
+                    styles.showText
+                  }>
                   {showPassword
                     ? 'Hide'
                     : 'Show'}
@@ -473,9 +623,15 @@ export default function SignupScreen({
               Confirm password
             </Text>
 
-            <View style={styles.inputContainer}>
+            <View
+              style={
+                styles.inputContainer
+              }>
 
-              <Text style={styles.inputIcon}>
+              <Text
+                style={
+                  styles.inputIcon
+                }>
                 •
               </Text>
 
@@ -510,10 +666,15 @@ export default function SignupScreen({
                     value => !value,
                   )
                 }
-                style={styles.showButton}
+                style={
+                  styles.showButton
+                }
                 disabled={loading}>
 
-                <Text style={styles.showText}>
+                <Text
+                  style={
+                    styles.showText
+                  }>
                   {showConfirmPassword
                     ? 'Hide'
                     : 'Show'}
@@ -525,7 +686,8 @@ export default function SignupScreen({
 
             {/* PASSWORD MATCH */}
 
-            {confirmPassword.length > 0 ? (
+            {confirmPassword.length >
+            0 ? (
               <Text
                 style={
                   password ===
@@ -609,14 +771,16 @@ export default function SignupScreen({
 
             </Pressable>
 
-            {/* GOOGLE - COMMENTED FOR NOW */}
+            {/* GOOGLE - COMMENTED */}
 
             {/*
             <View style={styles.dividerRow}>
               <View style={styles.divider} />
+
               <Text style={styles.dividerText}>
                 OR
               </Text>
+
               <View style={styles.divider} />
             </View>
 
@@ -629,9 +793,15 @@ export default function SignupScreen({
 
             {/* LOGIN */}
 
-            <View style={styles.loginRow}>
+            <View
+              style={
+                styles.loginRow
+              }>
 
-              <Text style={styles.loginText}>
+              <Text
+                style={
+                  styles.loginText
+                }>
                 Already have an account?
               </Text>
 
@@ -659,9 +829,9 @@ export default function SignupScreen({
           {/* FOOTER */}
 
           <Text style={styles.footer}>
-            By creating an account, you agree
-            to our Terms of Service and Privacy
-            Policy.
+            By creating an account, you
+            agree to our Terms of Service
+            and Privacy Policy.
           </Text>
 
         </ScrollView>
@@ -745,7 +915,8 @@ const styles = StyleSheet.create({
   },
 
   backText: {
-    color: 'rgba(255,255,255,0.9)',
+    color:
+      'rgba(255,255,255,0.9)',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -789,7 +960,8 @@ const styles = StyleSheet.create({
   },
 
   heroSubtitle: {
-    color: 'rgba(255,255,255,0.84)',
+    color:
+      'rgba(255,255,255,0.84)',
     fontSize: 15,
     lineHeight: 22,
     maxWidth: 330,
@@ -821,7 +993,8 @@ const styles = StyleSheet.create({
   labelRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent:
+      'space-between',
   },
 
   label: {
@@ -1022,7 +1195,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 21,
     marginLeft: 10,
-    marginTop: -1,
   },
 
   buttonPressed: {

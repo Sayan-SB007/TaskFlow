@@ -16,8 +16,17 @@ import {
   View,
 } from 'react-native';
 
-import {useAppDispatch} from '../../../hooks/useAppDispatch';
-import {useAppSelector} from '../../../hooks/useAppSelector';
+import {
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
+
+import {
+  useAppDispatch,
+} from '../../../hooks/useAppDispatch';
+
+import {
+  useAppSelector,
+} from '../../../hooks/useAppSelector';
 
 import {
   selectCompletedCount,
@@ -40,17 +49,46 @@ import type {
   TaskFilter,
 } from '../types';
 
-import {TaskCard} from '../components/TaskCard';
-import {ProductivityCard} from '../components/ProductivityCard';
-import {TaskFormSheet} from '../components/TaskFormSheet';
-import {TaskDetailsSheet} from '../components/TaskDetailsSheet';
+import {
+  TaskCard,
+} from '../components/TaskCard';
 
-import {lightTheme} from '../../../theme/lightTheme';
-import {spacing} from '../../../theme/spacing';
-import {typography} from '../../../theme/typography';
-import {shadows} from '../../../theme/shadows';
+import {
+  ProductivityCard,
+} from '../components/ProductivityCard';
 
-import {debugTasks} from '../../../database/debug';
+import {
+  TaskFormSheet,
+} from '../components/TaskFormSheet';
+
+import {
+  TaskDetailsSheet,
+} from '../components/TaskDetailsSheet';
+
+import {
+  lightTheme,
+} from '../../../theme/lightTheme';
+
+import {
+  spacing,
+} from '../../../theme/spacing';
+
+import {
+  typography,
+} from '../../../theme/typography';
+
+import {
+  shadows,
+} from '../../../theme/shadows';
+
+import {
+  debugTasks,
+} from '../../../database/debug';
+
+import {
+  firebaseAuth,
+} from '../../../config/firebase';
+
 
 /* ================================================= */
 /* FILTERS                                           */
@@ -60,19 +98,43 @@ const FILTERS: {
   label: string;
   value: TaskFilter;
 }[] = [
-  {
-    label: 'All',
-    value: 'all',
-  },
-  {
-    label: 'Today',
-    value: 'today',
-  },
-  {
-    label: 'Upcoming',
-    value: 'upcoming',
-  },
-];
+    {
+      label: 'All',
+      value: 'all',
+    },
+    {
+      label: 'Today',
+      value: 'today',
+    },
+    {
+      label: 'Upcoming',
+      value: 'upcoming',
+    },
+  ];
+
+
+/* ================================================= */
+/* GREETING                                          */
+/* ================================================= */
+
+const getGreeting = (): string => {
+  const hour = new Date().getHours();
+
+  if (hour >= 5 && hour < 12) {
+    return 'Good morning';
+  }
+
+  if (hour >= 12 && hour < 17) {
+    return 'Good afternoon';
+  }
+
+  if (hour >= 17 && hour < 21) {
+    return 'Good evening';
+  }
+
+  return 'Good night';
+};
+
 
 /* ================================================= */
 /* SCREEN                                             */
@@ -80,6 +142,9 @@ const FILTERS: {
 
 export function TasksScreen() {
   const dispatch = useAppDispatch();
+
+  const insets = useSafeAreaInsets();
+
 
   /* ================================================= */
   /* UI STATE                                           */
@@ -99,6 +164,7 @@ export function TasksScreen() {
 
   const [taskToDelete, setTaskToDelete] =
     useState<Task | null>(null);
+
 
   /* ================================================= */
   /* REDUX STATE                                        */
@@ -136,14 +202,32 @@ export function TasksScreen() {
     state => state.tasks.operation,
   );
 
+
+  /* ================================================= */
+  /* CURRENT USER                                      */
+  /* ================================================= */
+
+  const currentUser =
+    firebaseAuth.currentUser;
+
+  const userName =
+    currentUser?.displayName?.trim() ||
+    'there';
+
+  const greeting =
+    getGreeting();
+
+
   /* ================================================= */
   /* DATABASE INITIALIZATION                           */
   /* ================================================= */
 
   useEffect(() => {
     dispatch(loadTasks());
+
     debugTasks();
   }, [dispatch]);
+
 
   /* ================================================= */
   /* LOADING MESSAGE                                   */
@@ -160,8 +244,9 @@ export function TasksScreen() {
             ? 'Updating task...'
             : 'Loading tasks...';
 
+
   /* ================================================= */
-  /* TASK ACTIONS                                      */
+  /* TASK TOGGLE                                       */
   /* ================================================= */
 
   const handleToggle = useCallback(
@@ -170,10 +255,20 @@ export function TasksScreen() {
         return;
       }
 
-      dispatch(toggleTask(task.id));
+      dispatch(
+        toggleTask(task.id),
+      );
     },
-    [dispatch, taskStatus],
+    [
+      dispatch,
+      taskStatus,
+    ],
   );
+
+
+  /* ================================================= */
+  /* TASK PRESS                                        */
+  /* ================================================= */
 
   const handleTaskPress = useCallback(
     (task: Task) => {
@@ -188,16 +283,27 @@ export function TasksScreen() {
     [taskStatus],
   );
 
+
+  /* ================================================= */
+  /* FILTER                                            */
+  /* ================================================= */
+
   const handleFilter = useCallback(
     (value: TaskFilter) => {
       if (taskStatus === 'loading') {
         return;
       }
 
-      dispatch(setFilter(value));
+      dispatch(
+        setFilter(value),
+      );
     },
-    [dispatch, taskStatus],
+    [
+      dispatch,
+      taskStatus,
+    ],
   );
+
 
   /* ================================================= */
   /* CREATE                                             */
@@ -213,6 +319,11 @@ export function TasksScreen() {
     setFormVisible(true);
   }, [taskStatus]);
 
+
+  /* ================================================= */
+  /* CLOSE FORM                                        */
+  /* ================================================= */
+
   const handleCloseForm = useCallback(() => {
     if (taskStatus === 'loading') {
       return;
@@ -223,8 +334,9 @@ export function TasksScreen() {
     setSelectedTask(null);
   }, [taskStatus]);
 
+
   /* ================================================= */
-  /* DETAILS                                            */
+  /* CLOSE DETAILS                                     */
   /* ================================================= */
 
   const handleCloseDetails =
@@ -238,6 +350,7 @@ export function TasksScreen() {
       setSelectedTask(null);
     }, [taskStatus]);
 
+
   /* ================================================= */
   /* COMPLETE FROM DETAILS                             */
   /* ================================================= */
@@ -249,13 +362,19 @@ export function TasksScreen() {
           return;
         }
 
-        dispatch(toggleTask(task.id));
+        dispatch(
+          toggleTask(task.id),
+        );
       },
-      [dispatch, taskStatus],
+      [
+        dispatch,
+        taskStatus,
+      ],
     );
 
+
   /* ================================================= */
-  /* EDIT                                               */
+  /* EDIT                                              */
   /* ================================================= */
 
   const handleEditTask =
@@ -274,8 +393,9 @@ export function TasksScreen() {
       [taskStatus],
     );
 
+
   /* ================================================= */
-  /* DELETE REQUEST                                     */
+  /* DELETE REQUEST                                    */
   /* ================================================= */
 
   const handleDeleteRequest =
@@ -294,8 +414,9 @@ export function TasksScreen() {
       [taskStatus],
     );
 
+
   /* ================================================= */
-  /* DELETE CONFIRM                                     */
+  /* DELETE CONFIRM                                    */
   /* ================================================= */
 
   const handleConfirmDelete =
@@ -308,7 +429,9 @@ export function TasksScreen() {
       }
 
       dispatch(
-        deleteTask(taskToDelete.id),
+        deleteTask(
+          taskToDelete.id,
+        ),
       );
 
       setDeleteVisible(false);
@@ -321,6 +444,7 @@ export function TasksScreen() {
       taskStatus,
       taskToDelete,
     ]);
+
 
   /* ================================================= */
   /* DELETE CANCEL                                     */
@@ -336,6 +460,7 @@ export function TasksScreen() {
 
       setTaskToDelete(null);
     }, [taskStatus]);
+
 
   /* ================================================= */
   /* FLATLIST ITEM                                      */
@@ -361,52 +486,137 @@ export function TasksScreen() {
     ],
   );
 
+
   /* ================================================= */
-  /* RENDER                                             */
+  /* FAB POSITION                                      */
   /* ================================================= */
+
+  /*
+   * Keep the FAB above the Android
+   * system navigation area.
+   *
+   * We intentionally do NOT use
+   * useBottomTabBarHeight() here because
+   * the current screen layout should keep
+   * the FAB independent from the tab bar.
+   */
+
+  const fabBottom =
+    Math.max(
+      insets.bottom,
+      Platform.OS === 'android'
+        ? 12
+        : 8,
+    ) + 18;
+
+
+  /*
+   * Give the FlatList enough bottom room
+   * so the last task can always be scrolled
+   * above the FAB.
+   */
+
+  const listBottomPadding =
+    Math.max(
+      insets.bottom,
+      Platform.OS === 'android'
+        ? 12
+        : 8,
+    ) + 110;
+
+
+
+  // RENDER
 
   return (
     <View style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" />
+
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor={
+          lightTheme.colors.background
+        }
+      />
+
 
       <FlatList
         data={tasks}
-        keyExtractor={item => item.id}
-        renderItem={renderTask}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={
-          styles.content
+
+        keyExtractor={
+          item => item.id
         }
+
+        renderItem={
+          renderTask
+        }
+
+        showsVerticalScrollIndicator={
+          false
+        }
+
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingBottom:
+              listBottomPadding,
+          },
+        ]}
+
         initialNumToRender={8}
+
         maxToRenderPerBatch={8}
+
         windowSize={7}
+
         removeClippedSubviews
+
+
+        /* ================================================= */
+        /* HEADER                                             */
+        /* ================================================= */
+
         ListHeaderComponent={
           <>
-            {/* ========================= */}
-            {/* HEADER */}
-            {/* ========================= */}
+            <View
+              style={
+                styles.header
+              }>
 
-            <View style={styles.header}>
               <View
                 style={
                   styles.greetingContainer
                 }>
-                <Text style={styles.greeting}>
-                  Good morning 👋
+
+                <Text
+                  style={
+                    styles.greeting
+                  }>
+                  {greeting} 👋
                 </Text>
 
-                <Text style={styles.name}>
-                  Sayan
+                <Text
+                  style={
+                    styles.name
+                  }>
+                  {userName}
                 </Text>
+
               </View>
+
+
+              {/* Notification */}
 
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Notifications"
+                disabled={
+                  taskStatus ===
+                  'loading'
+                }
                 style={
                   styles.notificationButton
                 }>
+
                 <Text
                   style={
                     styles.notificationIcon
@@ -419,12 +629,15 @@ export function TasksScreen() {
                     styles.notificationDot
                   }
                 />
+
               </Pressable>
+
             </View>
 
-            {/* ========================= */}
-            {/* PRODUCTIVITY */}
-            {/* ========================= */}
+
+
+            {/* PRODUCTIVITY   */}
+    
 
             <ProductivityCard
               total={total}
@@ -433,218 +646,363 @@ export function TasksScreen() {
               progress={progress}
             />
 
-            {/* ========================= */}
-            {/* TASK HEADER */}
-            {/* ========================= */}
+
+        {/* TASK HEADER    */}
+   
 
             <View
-              style={styles.sectionHeader}>
+              style={
+                styles.sectionHeader
+              }>
+
               <Text
-                style={styles.sectionTitle}>
+                style={
+                  styles.sectionTitle
+                }>
                 My Tasks
               </Text>
+
 
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="See all tasks"
                 disabled={
-                  taskStatus === 'loading'
+                  taskStatus ===
+                  'loading'
                 }>
+
                 <Text
-                  style={styles.seeAll}>
+                  style={
+                    styles.seeAll
+                  }>
                   See all
                 </Text>
+
               </Pressable>
+
             </View>
 
-            {/* ========================= */}
-            {/* FILTERS */}
-            {/* ========================= */}
 
-            <View style={styles.filters}>
-              {FILTERS.map(item => {
-                const active =
-                  filter === item.value;
+        {/* FILTERS  */}
 
-                return (
-                  <Pressable
-                    key={item.value}
-                    accessibilityRole="button"
-                    accessibilityState={{
-                      selected: active,
-                    }}
-                    disabled={
-                      taskStatus === 'loading'
-                    }
-                    onPress={() =>
-                      handleFilter(
-                        item.value,
-                      )
-                    }
-                    style={[
-                      styles.filter,
-                      active &&
-                        styles.filterActive,
-                    ]}>
-                    <Text
+
+            <View
+              style={
+                styles.filters
+              }>
+
+              {FILTERS.map(
+                item => {
+
+                  const active =
+                    filter ===
+                    item.value;
+
+                  return (
+                    <Pressable
+                      key={
+                        item.value
+                      }
+
+                      accessibilityRole="button"
+
+                      accessibilityState={{
+                        selected:
+                          active,
+                      }}
+
+                      disabled={
+                        taskStatus ===
+                        'loading'
+                      }
+
+                      onPress={() =>
+                        handleFilter(
+                          item.value,
+                        )
+                      }
+
                       style={[
-                        styles.filterText,
+                        styles.filter,
+
                         active &&
-                          styles.filterTextActive,
+                        styles.filterActive,
+
+                        taskStatus ===
+                        'loading' &&
+                        styles.disabledButton,
                       ]}>
-                      {item.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+
+                      <Text
+                        style={[
+                          styles.filterText,
+
+                          active &&
+                          styles.filterTextActive,
+                        ]}>
+
+                        {item.label}
+
+                      </Text>
+
+                    </Pressable>
+                  );
+                },
+              )}
+
             </View>
+
           </>
         }
+
+
+        /* ================================================= */
+        /* EMPTY STATE                                        */
+        /* ================================================= */
+
         ListEmptyComponent={
-          <View style={styles.empty}>
+          <View
+            style={
+              styles.empty
+            }>
+
             <View
               style={
                 styles.emptyIconContainer
               }>
-              <Text style={styles.emptyIcon}>
+
+              <Text
+                style={
+                  styles.emptyIcon
+                }>
                 ✓
               </Text>
+
             </View>
 
+
             <Text
-              style={styles.emptyTitle}>
+              style={
+                styles.emptyTitle
+              }>
               No tasks here
             </Text>
 
+
             <Text
-              style={styles.emptyText}>
+              style={
+                styles.emptyText
+              }>
               You're all caught up.
               {'\n'}
               Enjoy the moment.
             </Text>
 
+
             <Pressable
-              onPress={handleCreateTask}
-              disabled={
-                taskStatus === 'loading'
+              onPress={
+                handleCreateTask
               }
+
+              disabled={
+                taskStatus ===
+                'loading'
+              }
+
               style={[
                 styles.emptyButton,
-                taskStatus === 'loading' &&
-                  styles.disabledButton,
+
+                taskStatus ===
+                'loading' &&
+                styles.disabledButton,
               ]}>
+
               <Text
                 style={
                   styles.emptyButtonText
                 }>
                 Create a task
               </Text>
+
             </Pressable>
+
           </View>
         }
       />
 
+
       {/* ================================================= */}
-      {/* FLOATING ACTION BUTTON                             */}
-      {/* ================================================= */}
+      /* FLOATING ACTION BUTTON                             */
+      /* ================================================= */
 
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Create new task"
-        onPress={handleCreateTask}
-        disabled={
-          taskStatus === 'loading'
-        }
-        style={({pressed}) => [
-          styles.fab,
 
-          pressed &&
+        accessibilityLabel="Create new task"
+
+        onPress={
+          handleCreateTask
+        }
+
+        disabled={
+          taskStatus ===
+          'loading'
+        }
+
+        style={({
+          pressed,
+        }) => [
+            styles.fab,
+
+            {
+              bottom:
+                fabBottom,
+            },
+
+            pressed &&
             styles.fabPressed,
 
-          taskStatus === 'loading' &&
+            taskStatus ===
+            'loading' &&
             styles.disabledButton,
-        ]}>
-        <Text style={styles.fabText}>
+          ]}>
+
+        <Text
+          style={
+            styles.fabText
+          }>
           +
         </Text>
+
       </Pressable>
 
+
       {/* ================================================= */}
-      {/* CREATE / EDIT TASK                                */}
-      {/* ================================================= */}
+      /* CREATE / EDIT TASK                                */
+      /* ================================================= */
 
       <TaskFormSheet
-        visible={formVisible}
-        task={selectedTask}
-        onClose={handleCloseForm}
+        visible={
+          formVisible
+        }
+
+        task={
+          selectedTask
+        }
+
+        onClose={
+          handleCloseForm
+        }
       />
 
-      {/* ================================================= */}
-      {/* TASK DETAILS                                      */}
-      {/* ================================================= */}
+
+
+      /* TASK DETAILS */
+  
 
       <TaskDetailsSheet
-        visible={detailsVisible}
-        task={selectedTask}
-        onClose={handleCloseDetails}
-        onToggle={handleToggleFromDetails}
-        onEdit={handleEditTask}
-        onDelete={handleDeleteRequest}
+        visible={
+          detailsVisible
+        }
+
+        task={
+          selectedTask
+        }
+
+        onClose={
+          handleCloseDetails
+        }
+
+        onToggle={
+          handleToggleFromDetails
+        }
+
+        onEdit={
+          handleEditTask
+        }
+
+        onDelete={
+          handleDeleteRequest
+        }
       />
 
-      {/* ================================================= */}
-      {/* DELETE CONFIRMATION                               */}
-      {/* ================================================= */}
+
+
 
       <DeleteConfirmation
-        visible={deleteVisible}
-        task={taskToDelete}
-        onCancel={handleCancelDelete}
-        onConfirm={handleConfirmDelete}
+        visible={
+          deleteVisible
+        }
+
+        task={
+          taskToDelete
+        }
+
+        onCancel={
+          handleCancelDelete
+        }
+
+        onConfirm={
+          handleConfirmDelete
+        }
       />
 
-      {/* ================================================= */}
-      {/* DATABASE LOADING                                  */}
-      {/* ================================================= */}
+        /* DATABASE / TASK OPERATION LOADING                 */
+        
+        { taskStatus ===
+        'loading' && (
+          <Modal
+            visible
+            transparent
+            animationType="fade"
+            statusBarTranslucent
+            onRequestClose={() => { }}>
 
-      {taskStatus === 'loading' && (
-        <Modal
-          visible
-          transparent
-          animationType="fade"
-          statusBarTranslucent
-          onRequestClose={() => {}}>
-          <View
-            style={styles.loadingOverlay}>
             <View
-              style={styles.loadingCard}>
-              <ActivityIndicator
-                size="large"
-                color={
-                  lightTheme.colors.primary
-                }
-              />
+              style={
+                styles.loadingOverlay
+              }>
 
-              <Text
+              <View
                 style={
-                  styles.loadingTitle
+                  styles.loadingCard
                 }>
-                Please wait
-              </Text>
 
-              <Text
-                style={
-                  styles.loadingText
-                }>
-                {loadingMessage}
-              </Text>
+                <ActivityIndicator
+                  size="large"
+                  color={
+                    lightTheme.colors
+                      .primary
+                  }
+                />
+
+
+                <Text
+                  style={
+                    styles.loadingTitle
+                  }>
+                  Please wait
+                </Text>
+
+
+                <Text
+                  style={
+                    styles.loadingText
+                  }>
+                  {loadingMessage}
+                </Text>
+
+              </View>
+
             </View>
-          </View>
-        </Modal>
-      )}
+
+          </Modal>
+        )}
+
     </View>
   );
 }
+
 
 /* ================================================= */
 /* DELETE CONFIRMATION                               */
@@ -657,81 +1015,142 @@ interface DeleteConfirmationProps {
   onConfirm: () => void;
 }
 
+
 function DeleteConfirmation({
   visible,
   task,
   onCancel,
   onConfirm,
 }: DeleteConfirmationProps) {
+
   return (
     <Modal
       visible={visible}
       transparent
       animationType="fade"
-      onRequestClose={onCancel}>
+      onRequestClose={
+        onCancel
+      }>
+
       <View
-        style={styles.deleteOverlay}>
+        style={
+          styles.deleteOverlay
+        }>
+
         <View
-          style={styles.deleteDialog}>
+          style={
+            styles.deleteDialog
+          }>
+
+
+          {/* Delete icon */}
+
           <View
             style={
               styles.deleteIconContainer
             }>
+
             <Text
-              style={styles.deleteIcon}>
+              style={
+                styles.deleteIcon
+              }>
               !
             </Text>
+
           </View>
 
+
+          {/* Title */}
+
           <Text
-            style={styles.deleteTitle}>
+            style={
+              styles.deleteTitle
+            }>
             Delete task?
           </Text>
 
+
+          {/* Message */}
+
           <Text
-            style={styles.deleteMessage}>
+            style={
+              styles.deleteMessage
+            }>
+
             {task
               ? `"${task.title}" will be permanently removed.`
               : 'This task will be permanently removed.'}
+
           </Text>
 
+
+          {/* Actions */}
+
           <View
-            style={styles.deleteActions}>
+            style={
+              styles.deleteActions
+            }>
+
             <Pressable
-              onPress={onCancel}
-              style={styles.cancelButton}>
+              onPress={
+                onCancel
+              }
+
+              disabled={false}
+
+              style={
+                styles.cancelButton
+              }>
+
               <Text
                 style={
                   styles.cancelButtonText
                 }>
                 Cancel
               </Text>
+
             </Pressable>
 
+
             <Pressable
-              onPress={onConfirm}
+              onPress={
+                onConfirm
+              }
+
               style={
                 styles.confirmDeleteButton
               }>
+
               <Text
                 style={
                   styles.confirmDeleteText
                 }>
                 Delete
               </Text>
+
             </Pressable>
+
           </View>
+
         </View>
+
       </View>
+
     </Modal>
   );
 }
+
 
 /* ================================================= */
 /* STYLES                                            */
 /* ================================================= */
 
 const styles = StyleSheet.create({
+
+  /* ================================================= */
+  /* SCREEN                                             */
+  /* ================================================= */
+
   safeArea: {
     flex: 1,
 
@@ -740,20 +1159,31 @@ const styles = StyleSheet.create({
 
     paddingTop:
       Platform.OS === 'android'
-        ? StatusBar.currentHeight ?? 0
+        ? StatusBar.currentHeight ??
+        0
         : 0,
   },
+
 
   content: {
     paddingHorizontal:
       spacing.xl,
 
-    paddingBottom: 150,
+    /*
+     * This is intentionally larger
+     * than the FAB height.
+     *
+     * It allows the user to scroll
+     * the final task completely above
+     * the floating button.
+     */
+    paddingBottom: 120,
   },
 
-  /* ========================= */
-  /* HEADER */
-  /* ========================= */
+
+  /* ================================================= */
+  /* HEADER                                             */
+  /* ================================================= */
 
   header: {
     flexDirection: 'row',
@@ -763,15 +1193,18 @@ const styles = StyleSheet.create({
     justifyContent:
       'space-between',
 
-    paddingTop: spacing.md,
+    paddingTop:
+      spacing.md,
 
     paddingBottom:
       spacing.xxl,
   },
 
+
   greetingContainer: {
     flex: 1,
   },
+
 
   greeting: {
     ...typography.body,
@@ -779,6 +1212,7 @@ const styles = StyleSheet.create({
     color:
       lightTheme.colors.textSecondary,
   },
+
 
   name: {
     ...typography.display,
@@ -789,8 +1223,10 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
+
   notificationButton: {
     width: 46,
+
     height: 46,
 
     borderRadius: 15,
@@ -808,9 +1244,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
+
   notificationIcon: {
     fontSize: 18,
   },
+
 
   notificationDot: {
     position: 'absolute',
@@ -834,9 +1272,10 @@ const styles = StyleSheet.create({
       lightTheme.colors.surface,
   },
 
-  /* ========================= */
-  /* TASK SECTION */
-  /* ========================= */
+
+  /* ================================================= */
+  /* TASK SECTION                                       */
+  /* ================================================= */
 
   sectionHeader: {
     flexDirection: 'row',
@@ -850,12 +1289,14 @@ const styles = StyleSheet.create({
       spacing.md,
   },
 
+
   sectionTitle: {
     ...typography.title,
 
     color:
       lightTheme.colors.text,
   },
+
 
   seeAll: {
     ...typography.bodyMedium,
@@ -864,9 +1305,10 @@ const styles = StyleSheet.create({
       lightTheme.colors.primary,
   },
 
-  /* ========================= */
-  /* FILTERS */
-  /* ========================= */
+
+  /* ================================================= */
+  /* FILTERS                                           */
+  /* ================================================= */
 
   filters: {
     flexDirection: 'row',
@@ -875,6 +1317,7 @@ const styles = StyleSheet.create({
       spacing.lg,
   },
 
+
   filter: {
     paddingHorizontal: 15,
 
@@ -882,13 +1325,16 @@ const styles = StyleSheet.create({
 
     borderRadius: 10,
 
-    marginRight: spacing.sm,
+    marginRight:
+      spacing.sm,
   },
+
 
   filterActive: {
     backgroundColor:
       lightTheme.colors.primarySoft,
   },
+
 
   filterText: {
     ...typography.caption,
@@ -897,6 +1343,7 @@ const styles = StyleSheet.create({
       lightTheme.colors.textSecondary,
   },
 
+
   filterTextActive: {
     color:
       lightTheme.colors.primary,
@@ -904,15 +1351,18 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  /* ========================= */
-  /* EMPTY STATE */
-  /* ========================= */
+
+  /* ================================================= */
+  /* EMPTY STATE                                        */
+  /* ================================================= */
 
   empty: {
     alignItems: 'center',
 
-    paddingTop: spacing.huge,
+    paddingTop:
+      spacing.huge,
   },
+
 
   emptyIconContainer: {
     width: 56,
@@ -929,6 +1379,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
+
   emptyIcon: {
     fontSize: 25,
 
@@ -938,14 +1389,17 @@ const styles = StyleSheet.create({
       lightTheme.colors.success,
   },
 
+
   emptyTitle: {
     ...typography.heading,
 
     color:
       lightTheme.colors.text,
 
-    marginTop: spacing.lg,
+    marginTop:
+      spacing.lg,
   },
+
 
   emptyText: {
     ...typography.body,
@@ -955,11 +1409,14 @@ const styles = StyleSheet.create({
 
     textAlign: 'center',
 
-    marginTop: spacing.xs,
+    marginTop:
+      spacing.xs,
   },
 
+
   emptyButton: {
-    marginTop: spacing.lg,
+    marginTop:
+      spacing.lg,
 
     paddingHorizontal:
       spacing.xl,
@@ -974,22 +1431,30 @@ const styles = StyleSheet.create({
       lightTheme.colors.primary,
   },
 
+
   emptyButtonText: {
     ...typography.button,
 
     color: '#FFFFFF',
   },
 
-  /* ========================= */
-  /* FAB */
-  /* ========================= */
+
+  /* ================================================= */
+  /* FAB                                                */
+  /* ================================================= */
 
   fab: {
     position: 'absolute',
 
     right: 20,
 
-    bottom: 34,
+    /*
+     * IMPORTANT:
+     * Do not hard-code bottom: 34 anymore.
+     * The actual bottom value is calculated
+     * from the device safe-area inset.
+     */
+    bottom: 30,
 
     width: 58,
 
@@ -1012,6 +1477,7 @@ const styles = StyleSheet.create({
     ...shadows.floating,
   },
 
+
   fabPressed: {
     transform: [
       {
@@ -1021,6 +1487,7 @@ const styles = StyleSheet.create({
 
     opacity: 0.9,
   },
+
 
   fabText: {
     color: '#FFFFFF',
@@ -1034,17 +1501,19 @@ const styles = StyleSheet.create({
     marginTop: -2,
   },
 
-  /* ========================= */
-  /* DISABLED */
-  /* ========================= */
+
+  /* ================================================= */
+  /* DISABLED                                           */
+  /* ================================================= */
 
   disabledButton: {
     opacity: 0.55,
   },
 
-  /* ========================= */
-  /* DELETE DIALOG */
-  /* ========================= */
+
+  /* ================================================= */
+  /* DELETE DIALOG                                     */
+  /* ================================================= */
 
   deleteOverlay: {
     flex: 1,
@@ -1060,6 +1529,7 @@ const styles = StyleSheet.create({
       spacing.xl,
   },
 
+
   deleteDialog: {
     width: '100%',
 
@@ -1069,10 +1539,12 @@ const styles = StyleSheet.create({
     borderRadius:
       lightTheme.radius.xl,
 
-    padding: spacing.xl,
+    padding:
+      spacing.xl,
 
     ...shadows.floating,
   },
+
 
   deleteIconContainer: {
     width: 48,
@@ -1088,8 +1560,10 @@ const styles = StyleSheet.create({
 
     justifyContent: 'center',
 
-    marginBottom: spacing.lg,
+    marginBottom:
+      spacing.lg,
   },
+
 
   deleteIcon: {
     fontSize: 23,
@@ -1100,12 +1574,14 @@ const styles = StyleSheet.create({
       lightTheme.colors.danger,
   },
 
+
   deleteTitle: {
     ...typography.title,
 
     color:
       lightTheme.colors.text,
   },
+
 
   deleteMessage: {
     ...typography.body,
@@ -1115,16 +1591,20 @@ const styles = StyleSheet.create({
 
     lineHeight: 22,
 
-    marginTop: spacing.sm,
+    marginTop:
+      spacing.sm,
   },
+
 
   deleteActions: {
     flexDirection: 'row',
 
     gap: spacing.md,
 
-    marginTop: spacing.xxl,
+    marginTop:
+      spacing.xxl,
   },
+
 
   cancelButton: {
     flex: 1,
@@ -1142,12 +1622,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
+
   cancelButtonText: {
     ...typography.button,
 
     color:
       lightTheme.colors.text,
   },
+
 
   confirmDeleteButton: {
     flex: 1,
@@ -1165,15 +1647,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
+
   confirmDeleteText: {
     ...typography.button,
 
     color: '#FFFFFF',
   },
 
-  /* ========================= */
-  /* LOADING */
-  /* ========================= */
+
+  /* ================================================= */
+  /* LOADING                                            */
+  /* ================================================= */
 
   loadingOverlay: {
     flex: 1,
@@ -1185,6 +1669,7 @@ const styles = StyleSheet.create({
 
     justifyContent: 'center',
   },
+
 
   loadingCard: {
     minWidth: 190,
@@ -1206,14 +1691,17 @@ const styles = StyleSheet.create({
     ...shadows.floating,
   },
 
+
   loadingTitle: {
     ...typography.bodyMedium,
 
     color:
       lightTheme.colors.text,
 
-    marginTop: spacing.md,
+    marginTop:
+      spacing.md,
   },
+
 
   loadingText: {
     ...typography.caption,
@@ -1221,8 +1709,10 @@ const styles = StyleSheet.create({
     color:
       lightTheme.colors.textSecondary,
 
-    marginTop: spacing.xs,
+    marginTop:
+      spacing.xs,
 
     textAlign: 'center',
   },
+
 });
