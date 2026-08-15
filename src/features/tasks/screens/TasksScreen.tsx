@@ -893,8 +893,6 @@ export function TasksScreen() {
       />
 
 
-
-      /* TASK DETAILS */
   
 
       <TaskDetailsSheet

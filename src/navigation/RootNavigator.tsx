@@ -1,4 +1,6 @@
-import React, {useEffect} from 'react';
+import React, {
+  useEffect,
+} from 'react';
 
 import {
   ActivityIndicator,
@@ -47,14 +49,22 @@ import {
   startSyncListener,
 } from '../features/sync/syncService';
 
+import {
+  SyncStatusBanner,
+} from '../features/sync/SyncStatusBanner';
+
 
 export function RootNavigator() {
-  const dispatch = useAppDispatch();
+
+  const dispatch =
+    useAppDispatch();
+
 
   const initialized =
     useAppSelector(
       selectAuthInitialized,
     );
+
 
   const isAuthenticated =
     useAppSelector(
@@ -67,23 +77,31 @@ export function RootNavigator() {
   /* ================================================= */
 
   useEffect(() => {
+
     const unsubscribe =
       authService.subscribe(user => {
+
         dispatch(
           authStateChanged(
             user
               ? {
                   id: user.uid,
-                  email: user.email,
+
+                  email:
+                    user.email,
+
                   displayName:
                     user.displayName,
                 }
               : null,
           ),
         );
+
       });
 
+
     return unsubscribe;
+
   }, [dispatch]);
 
 
@@ -92,29 +110,23 @@ export function RootNavigator() {
   /* ================================================= */
 
   useEffect(() => {
-    /*
-     * Authentication has not completed yet.
-     *
-     * We don't start Firestore sync until
-     * Firebase tells us that the user is
-     * authenticated.
-     */
+
     if (!isAuthenticated) {
       return;
     }
+
 
     console.log(
       'SYNC: Starting task sync listener...',
     );
 
+
     const unsubscribe =
       startSyncListener();
 
-    /*
-     * Stop listening for network changes
-     * when the user logs out.
-     */
+
     return unsubscribe;
+
   }, [isAuthenticated]);
 
 
@@ -122,14 +134,8 @@ export function RootNavigator() {
   /* AUTH INITIALIZATION                               */
   /* ================================================= */
 
-  /*
-   * IMPORTANT:
-   *
-   * This return comes AFTER all hooks.
-   *
-   * Never put this before the sync useEffect.
-   */
   if (!initialized) {
+
     return (
       <View
         style={
@@ -145,6 +151,7 @@ export function RootNavigator() {
 
       </View>
     );
+
   }
 
 
@@ -153,15 +160,42 @@ export function RootNavigator() {
   /* ================================================= */
 
   return (
-    <NavigationContainer>
+    <View
+      style={
+        styles.root
+      }>
 
-      {isAuthenticated ? (
-        <AppNavigator />
-      ) : (
-        <AuthNavigator />
+      {/* ============================================= */}
+      {/* SYNC STATUS                                   */}
+      {/* ============================================= */}
+
+      {isAuthenticated && (
+        <SyncStatusBanner />
       )}
 
-    </NavigationContainer>
+
+      {/* ============================================= */}
+      {/* NAVIGATION                                    */}
+      {/* ============================================= */}
+
+      <View
+        style={
+          styles.navigation
+        }>
+
+        <NavigationContainer>
+
+          {isAuthenticated ? (
+            <AppNavigator />
+          ) : (
+            <AuthNavigator />
+          )}
+
+        </NavigationContainer>
+
+      </View>
+
+    </View>
   );
 }
 
@@ -171,6 +205,19 @@ export function RootNavigator() {
 /* ================================================= */
 
 const styles = StyleSheet.create({
+
+  root: {
+    flex: 1,
+
+    backgroundColor:
+      lightTheme.colors.background,
+  },
+
+
+  navigation: {
+    flex: 1,
+  },
+
 
   loadingContainer: {
     flex: 1,
