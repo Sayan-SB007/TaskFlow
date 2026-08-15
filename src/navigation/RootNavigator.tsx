@@ -10,8 +10,13 @@ import {
   NavigationContainer,
 } from '@react-navigation/native';
 
-import {useAppDispatch} from '../hooks/useAppDispatch';
-import {useAppSelector} from '../hooks/useAppSelector';
+import {
+  useAppDispatch,
+} from '../hooks/useAppDispatch';
+
+import {
+  useAppSelector,
+} from '../hooks/useAppSelector';
 
 import {
   authStateChanged,
@@ -22,23 +27,44 @@ import {
   selectIsAuthenticated,
 } from '../features/auth/authSelectors';
 
-import {authService} from '../features/auth/authService';
+import {
+  authService,
+} from '../features/auth/authService';
 
-import {AuthNavigator} from './AuthNavigator';
-import {AppNavigator} from './AppNavigator';
+import {
+  AuthNavigator,
+} from './AuthNavigator';
 
-import {lightTheme} from '../theme/lightTheme';
+import {
+  AppNavigator,
+} from './AppNavigator';
+
+import {
+  lightTheme,
+} from '../theme/lightTheme';
+
+import {
+  startSyncListener,
+} from '../features/sync/syncService';
+
 
 export function RootNavigator() {
   const dispatch = useAppDispatch();
 
-  const initialized = useAppSelector(
-    selectAuthInitialized,
-  );
+  const initialized =
+    useAppSelector(
+      selectAuthInitialized,
+    );
 
-  const isAuthenticated = useAppSelector(
-    selectIsAuthenticated,
-  );
+  const isAuthenticated =
+    useAppSelector(
+      selectIsAuthenticated,
+    );
+
+
+  /* ================================================= */
+  /* FIREBASE AUTH LISTENER                            */
+  /* ================================================= */
 
   useEffect(() => {
     const unsubscribe =
@@ -60,38 +86,101 @@ export function RootNavigator() {
     return unsubscribe;
   }, [dispatch]);
 
+
+  /* ================================================= */
+  /* FIRESTORE SYNC LISTENER                           */
+  /* ================================================= */
+
+  useEffect(() => {
+    /*
+     * Authentication has not completed yet.
+     *
+     * We don't start Firestore sync until
+     * Firebase tells us that the user is
+     * authenticated.
+     */
+    if (!isAuthenticated) {
+      return;
+    }
+
+    console.log(
+      'SYNC: Starting task sync listener...',
+    );
+
+    const unsubscribe =
+      startSyncListener();
+
+    /*
+     * Stop listening for network changes
+     * when the user logs out.
+     */
+    return unsubscribe;
+  }, [isAuthenticated]);
+
+
+  /* ================================================= */
+  /* AUTH INITIALIZATION                               */
+  /* ================================================= */
+
   /*
-   * Firebase is checking whether a previous
-   * session exists.
+   * IMPORTANT:
+   *
+   * This return comes AFTER all hooks.
+   *
+   * Never put this before the sync useEffect.
    */
   if (!initialized) {
     return (
-      <View style={styles.loadingContainer}>
+      <View
+        style={
+          styles.loadingContainer
+        }>
+
         <ActivityIndicator
           size="large"
-          color={lightTheme.colors.primary}
+          color={
+            lightTheme.colors.primary
+          }
         />
+
       </View>
     );
   }
 
+
+  /* ================================================= */
+  /* NAVIGATION                                        */
+  /* ================================================= */
+
   return (
     <NavigationContainer>
+
       {isAuthenticated ? (
         <AppNavigator />
       ) : (
         <AuthNavigator />
       )}
+
     </NavigationContainer>
   );
 }
 
+
+/* ================================================= */
+/* STYLES                                            */
+/* ================================================= */
+
 const styles = StyleSheet.create({
+
   loadingContainer: {
     flex: 1,
+
     alignItems: 'center',
+
     justifyContent: 'center',
+
     backgroundColor:
       lightTheme.colors.background,
   },
+
 });

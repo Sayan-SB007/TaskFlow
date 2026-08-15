@@ -20,6 +20,11 @@ export function SettingsScreen() {
   const [loggingOut, setLoggingOut] = useState(false);
 
   const user = firebaseAuth.currentUser;
+console.log('========== FIRESTORE SYNC AUTH ==========');
+console.log('Firebase UID:', user?.uid);
+console.log('Firebase Email:', user?.email);
+console.log('Is authenticated:', !!user);
+console.log('==========================================');
 
   const displayName =
     user?.displayName?.trim() ||

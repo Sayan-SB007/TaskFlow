@@ -531,12 +531,9 @@ export function TasksScreen() {
   return (
     <View style={styles.safeArea}>
 
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor={
-          lightTheme.colors.background
-        }
-      />
+<StatusBar
+  barStyle="dark-content"
+/>
 
 
       <FlatList
