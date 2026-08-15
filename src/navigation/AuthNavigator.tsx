@@ -1,24 +1,152 @@
-import React from 'react';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import React, {
+  Suspense,
+  lazy,
+} from 'react';
 
-import type { AuthStackParamList } from './types';
-import SignupScreen from '../features/auth/screens/SignupScreen';
-import LoginScreen from '../features/auth/screens/LoginScreen';
+import {
+  ActivityIndicator,
+  StyleSheet,
+  View,
+  Text,
+} from 'react-native';
 
-const Stack = createNativeStackNavigator<AuthStackParamList>();
+import {
+  createNativeStackNavigator,
+} from '@react-navigation/native-stack';
+
+import type {
+  AuthStackParamList,
+} from './types';
+
+/* ================================================= */
+/* LAZY LOADED AUTH SCREENS                          */
+/* ================================================= */
+
+const LazyLoginScreen = lazy(
+  () =>
+    import(
+      '../features/auth/screens/LoginScreen'
+    ),
+);
+
+const LazySignupScreen = lazy(
+  () =>
+    import(
+      '../features/auth/screens/SignupScreen'
+    ),
+);
+
+/* ================================================= */
+/* NAVIGATOR                                         */
+/* ================================================= */
+
+const Stack =
+  createNativeStackNavigator<AuthStackParamList>();
+
+/* ================================================= */
+/* LOADING                                           */
+/* ================================================= */
+
+function ScreenLoader() {
+  return (
+    <View
+      style={
+        styles.loadingContainer
+      }
+    >
+      <ActivityIndicator
+        size="large"
+        color="#1769E0"
+      />
+
+      <Text
+        style={
+          styles.loadingText
+        }
+      >
+        Loading...
+      </Text>
+    </View>
+  );
+}
+
+/* ================================================= */
+/* AUTH NAVIGATOR                                    */
+/* ================================================= */
 
 export function AuthNavigator() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+
+      {/* ================================================= */}
+      {/* LOGIN                                             */}
+      {/* ================================================= */}
+
       <Stack.Screen
         name="Login"
-        component={LoginScreen}
-      />
+      >
+        {() => (
+          <Suspense
+            fallback={
+              <ScreenLoader />
+            }
+          >
+            <LazyLoginScreen />
+          </Suspense>
+        )}
+      </Stack.Screen>
+
+      {/* ================================================= */}
+      {/* SIGNUP                                            */}
+      {/* ================================================= */}
 
       <Stack.Screen
         name="Signup"
-        component={SignupScreen}
-      />
+      >
+        {() => (
+          <Suspense
+            fallback={
+              <ScreenLoader />
+            }
+          >
+            <LazySignupScreen />
+          </Suspense>
+        )}
+      </Stack.Screen>
+
     </Stack.Navigator>
   );
 }
+
+/* ================================================= */
+/* STYLES                                            */
+/* ================================================= */
+
+const styles = StyleSheet.create({
+
+  loadingContainer: {
+    flex: 1,
+
+    alignItems: 'center',
+
+    justifyContent: 'center',
+
+    backgroundColor:
+      '#F7F8FA',
+  },
+
+  loadingText: {
+    marginTop: 10,
+
+    fontSize: 13,
+
+    color: '#64748B',
+
+    fontWeight: '600',
+  },
+
+});

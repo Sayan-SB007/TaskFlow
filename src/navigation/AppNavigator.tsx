@@ -1,4 +1,7 @@
-import React from 'react';
+import React, {
+  Suspense,
+  lazy,
+} from 'react';
 
 import {
   createBottomTabNavigator,
@@ -9,6 +12,7 @@ import {
 } from '@react-navigation/native-stack';
 
 import {
+  ActivityIndicator,
   Text,
   View,
   StyleSheet,
@@ -18,15 +22,41 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 
-import {
-  TasksScreen,
-} from '../features/tasks/screens/TasksScreen';
+/* ================================================= */
+/* LAZY LOADED SCREENS                               */
+/* ================================================= */
 
-import {
-  SettingsScreen,
-} from '../features/settings/screens/SettingsScreen';
+/*
+ * Screens are loaded only when React needs them.
+ *
+ * This keeps the initial navigation tree lighter
+ * and avoids eagerly evaluating every screen module.
+ */
 
-import TaskFormScreen from '../features/tasks/screens/TaskFormScreen';
+const LazyTasksScreen = lazy(
+  () =>
+    import(
+      '../features/tasks/screens/TasksScreen'
+    ).then(module => ({
+      default: module.TasksScreen,
+    })),
+);
+
+const LazySettingsScreen = lazy(
+  () =>
+    import(
+      '../features/settings/screens/SettingsScreen'
+    ).then(module => ({
+      default: module.SettingsScreen,
+    })),
+);
+
+const LazyTaskFormScreen = lazy(
+  () =>
+    import(
+      '../features/tasks/screens/TaskFormScreen'
+    ),
+);
 
 /* ================================================= */
 /* TYPES                                             */
@@ -51,6 +81,25 @@ const Tab =
 
 const Stack =
   createNativeStackNavigator<AppStackParamList>();
+
+/* ================================================= */
+/* LAZY SCREEN LOADING                               */
+/* ================================================= */
+
+function ScreenLoader() {
+  return (
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator
+        size="large"
+        color="#1769E0"
+      />
+
+      <Text style={styles.loadingText}>
+        Loading...
+      </Text>
+    </View>
+  );
+}
 
 /* ================================================= */
 /* TAB ICON                                          */
@@ -98,8 +147,6 @@ function MainTabs() {
    * - Home button
    * - Back button
    * - Gesture navigation area
-   *
-   * It does NOT change any navigation functionality.
    */
   const insets =
     useSafeAreaInsets();
@@ -121,8 +168,16 @@ function MainTabs() {
   return (
     <Tab.Navigator
       initialRouteName="Tasks"
+
+      /*
+       * Bottom tabs already support lazy
+       * rendering. Keep this explicitly enabled
+       * for clarity and assignment requirements.
+       */
       screenOptions={{
         headerShown: false,
+
+        lazy: true,
 
         tabBarActiveTintColor:
           '#1769E0',
@@ -138,22 +193,11 @@ function MainTabs() {
           marginBottom: 4,
         },
 
-        /*
-         * ONLY CHANGE:
-         *
-         * The previous fixed 68px height
-         * did not account for the Android
-         * system navigation area.
-         */
         tabBarStyle: {
           height: tabBarHeight,
 
           paddingTop: 6,
 
-          /*
-           * Keep the tab content above the
-           * Android Home / Back area.
-           */
           paddingBottom:
             insets.bottom + 7,
 
@@ -181,13 +225,13 @@ function MainTabs() {
         },
       }}
     >
+
       {/* ================================================= */}
       {/* TASKS                                             */}
       {/* ================================================= */}
 
       <Tab.Screen
         name="Tasks"
-        component={TasksScreen}
         options={{
           tabBarLabel: 'Tasks',
 
@@ -200,7 +244,15 @@ function MainTabs() {
             />
           ),
         }}
-      />
+      >
+        {() => (
+          <Suspense
+            fallback={<ScreenLoader />}
+          >
+            <LazyTasksScreen />
+          </Suspense>
+        )}
+      </Tab.Screen>
 
       {/* ================================================= */}
       {/* SETTINGS                                          */}
@@ -208,7 +260,6 @@ function MainTabs() {
 
       <Tab.Screen
         name="Settings"
-        component={SettingsScreen}
         options={{
           tabBarLabel: 'Settings',
 
@@ -221,7 +272,16 @@ function MainTabs() {
             />
           ),
         }}
-      />
+      >
+        {() => (
+          <Suspense
+            fallback={<ScreenLoader />}
+          >
+            <LazySettingsScreen />
+          </Suspense>
+        )}
+      </Tab.Screen>
+
     </Tab.Navigator>
   );
 }
@@ -237,15 +297,32 @@ export function AppNavigator() {
         headerShown: false,
       }}
     >
+
+      {/* ================================================= */}
+      {/* MAIN TABS                                         */}
+      {/* ================================================= */}
+
       <Stack.Screen
         name="MainTabs"
         component={MainTabs}
       />
 
+      {/* ================================================= */}
+      {/* TASK FORM                                         */}
+      {/* ================================================= */}
+
       <Stack.Screen
         name="TaskForm"
-        component={TaskFormScreen}
-      />
+      >
+        {() => (
+          <Suspense
+            fallback={<ScreenLoader />}
+          >
+            <LazyTaskFormScreen />
+          </Suspense>
+        )}
+      </Stack.Screen>
+
     </Stack.Navigator>
   );
 }
@@ -255,9 +332,40 @@ export function AppNavigator() {
 /* ================================================= */
 
 const styles = StyleSheet.create({
+
+  /* ================================================= */
+  /* LAZY LOADING                                     */
+  /* ================================================= */
+
+  loadingContainer: {
+    flex: 1,
+
+    alignItems: 'center',
+
+    justifyContent: 'center',
+
+    backgroundColor:
+      '#F7F8FA',
+  },
+
+  loadingText: {
+    marginTop: 10,
+
+    fontSize: 13,
+
+    color: '#64748B',
+
+    fontWeight: '600',
+  },
+
+  /* ================================================= */
+  /* TAB ICON                                          */
+  /* ================================================= */
+
   iconContainer: {
     width: 32,
     height: 28,
+
     borderRadius: 10,
 
     alignItems: 'center',
@@ -271,11 +379,14 @@ const styles = StyleSheet.create({
 
   icon: {
     fontSize: 18,
+
     color: '#94A3B8',
+
     fontWeight: '700',
   },
 
   iconActive: {
     color: '#1769E0',
   },
+
 });
