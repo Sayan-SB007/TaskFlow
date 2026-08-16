@@ -307,8 +307,6 @@ For a task reminder:
 
 The following should be verified before final submission:
 
--   Development/staging/production environment configuration must be
-    demonstrated clearly.
 -   Dark/light theme must be verified across all major screens.
 -   Firebase Cloud Messaging server push is a bonus requirement and may
     remain outside the current scope.

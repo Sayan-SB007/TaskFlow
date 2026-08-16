@@ -876,8 +876,8 @@ const handleToggleFromDetails =
 
 
       {/* ================================================= */}
-      /* FLOATING ACTION BUTTON                             */
-      /* ================================================= */
+      {/* FLOATING ACTION BUTTON                             */}
+      {/* ================================================= */}
 
       <Pressable
         accessibilityRole="button"
@@ -922,8 +922,8 @@ const handleToggleFromDetails =
 
 
       {/* ================================================= */}
-      /* CREATE / EDIT TASK                                */
-      /* ================================================= */
+      {/* CREATE / EDIT TASK                                */}
+      {/* ================================================= */}
 
       <TaskFormSheet
         visible={
@@ -972,7 +972,7 @@ const handleToggleFromDetails =
         }
       />
 
-        /* DATABASE / TASK OPERATION LOADING                 */
+        {/* DATABASE / TASK OPERATION LOADING                 */}
         
         { taskStatus ===
         'loading' && (
