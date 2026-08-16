@@ -9,6 +9,32 @@ function App() {
   useEffect(() => {
   void initializeNotifications();
 }, []);
+
+  useEffect(() => {
+
+    initializeNotifications()
+      .then(granted => {
+
+        console.log(
+          'NOTIFICATION: Initialized',
+          {
+            granted,
+          },
+        );
+
+      })
+      .catch(error => {
+
+        console.warn(
+          'NOTIFICATION: Initialization error',
+          error,
+        );
+
+      });
+
+  }, []);
+
+  
   return (
     <AppProviders>
       <RootNavigator />

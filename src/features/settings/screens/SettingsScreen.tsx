@@ -15,7 +15,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { signOut } from 'firebase/auth';
 
 import { firebaseAuth } from '../../../config/firebase';
-
+import { openNotificationSettings } from '../../notifications/notificationService';
+import notifee, {
+  AuthorizationStatus,
+} from '@notifee/react-native';
 export function SettingsScreen() {
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -112,6 +115,60 @@ console.log('==========================================');
       setLoggingOut(false);
     }
   };
+
+  /* ================================================= */
+/* NOTIFICATION SETTINGS                             */
+/* ================================================= */
+
+const handleNotificationSettings = async () => {
+
+  try {
+
+    const settings =
+      await notifee.getNotificationSettings();
+
+
+    const notificationsEnabled =
+      settings.authorizationStatus ===
+      AuthorizationStatus.AUTHORIZED;
+
+
+    Alert.alert(
+      'Notifications',
+
+      notificationsEnabled
+        ? 'Task reminders are enabled.'
+        : 'TaskFlow notifications are currently disabled.',
+
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+
+        {
+          text: 'Open settings',
+
+          onPress: () => {
+            void openNotificationSettings();
+          },
+        },
+      ],
+    );
+
+  } catch (error) {
+
+    console.warn(
+      'NOTIFICATION SETTINGS ERROR:',
+      error,
+    );
+
+    Alert.alert(
+      'Notifications',
+      'Unable to read notification settings.',
+    );
+  }
+};
 
   /* ================================================= */
   /* UI                                                */
@@ -251,43 +308,35 @@ console.log('==========================================');
 
           {/* ================= NOTIFICATIONS ================= */}
 
-          <Pressable
-            style={({ pressed }) => [
-              styles.settingRow,
-              pressed && styles.settingPressed,
-            ]}
-            onPress={() => {
-              Alert.alert(
-                'Notifications',
-                'Notification settings will be available soon.',
-              );
-            }}
-          >
+     <Pressable
+  style={({pressed}) => [
+    styles.settingRow,
+    pressed && styles.settingPressed,
+  ]}
+  onPress={() => {
+    void handleNotificationSettings();
+  }}
+>
+  <View style={styles.settingIcon}>
+    <Text style={styles.settingIconText}>
+      🔔
+    </Text>
+  </View>
 
-            <View style={styles.settingIcon}>
-              <Text style={styles.settingIconText}>
-                🔔
-              </Text>
-            </View>
+  <View style={styles.settingContent}>
+    <Text style={styles.settingTitle}>
+      Notifications
+    </Text>
 
-            <View style={styles.settingContent}>
+    <Text style={styles.settingValue}>
+      Manage task reminders
+    </Text>
+  </View>
 
-              <Text style={styles.settingTitle}>
-                Notifications
-              </Text>
-
-              <Text style={styles.settingValue}>
-                Manage task reminders
-              </Text>
-
-            </View>
-
-            <Text style={styles.chevron}>
-              ›
-            </Text>
-
-          </Pressable>
-
+  <Text style={styles.chevron}>
+    ›
+  </Text>
+</Pressable>
           <View style={styles.separator} />
 
           {/* ================= APPEARANCE ================= */}

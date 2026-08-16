@@ -87,6 +87,7 @@ import {
   firebaseAuth,
 } from '../../../config/firebase';
 import { debugTasks } from '../../../database/debug';
+import { clearPendingTaskNotification, subscribeToForegroundNotifications, getInitialTaskNotification, getPendingTaskNotification } from '../../notifications/notificationHandlers';
 
 
 /* ================================================= */
@@ -227,7 +228,122 @@ export function TasksScreen() {
     debugTasks();
   }, [dispatch]);
 
+/* ================================================= */
+/* NOTIFICATION → TASK DETAILS                       */
+/* ================================================= */
 
+useEffect(() => {
+
+  let mounted = true;
+
+
+  const openTaskFromNotification = (
+    taskId: string,
+  ) => {
+
+    if (!mounted) {
+      return;
+    }
+
+
+    /*
+     * Find the task from the current Redux list.
+     */
+    const task =
+      tasks.find(
+        item =>
+          item.id === taskId,
+      );
+
+
+    if (!task) {
+
+      console.warn(
+        'NOTIFICATION: Task not found',
+        {
+          taskId,
+        },
+      );
+
+      return;
+    }
+
+
+    console.log(
+      'NOTIFICATION: Opening task details',
+      {
+        taskId,
+      },
+    );
+
+
+    setSelectedTask(task);
+
+    setDetailsVisible(true);
+
+    void clearPendingTaskNotification();
+  };
+
+
+  /*
+   * App is currently open.
+   *
+   * Notification tap is delivered through
+   * the foreground event listener.
+   */
+  const unsubscribe =
+    subscribeToForegroundNotifications(
+      openTaskFromNotification,
+    );
+
+
+  /*
+   * App was completely killed and launched
+   * by tapping the notification.
+   */
+  void getInitialTaskNotification()
+    .then(taskId => {
+
+      if (
+        taskId &&
+        mounted
+      ) {
+
+        openTaskFromNotification(
+          taskId,
+        );
+      }
+    });
+
+
+  /*
+   * App was running in background and the
+   * background handler stored the task ID.
+   */
+  void getPendingTaskNotification()
+    .then(taskId => {
+
+      if (
+        taskId &&
+        mounted
+      ) {
+
+        openTaskFromNotification(
+          taskId,
+        );
+      }
+    });
+
+
+  return () => {
+
+    mounted = false;
+
+    unsubscribe();
+
+  };
+
+}, [tasks]);
   /* ================================================= */
   /* LOADING MESSAGE                                   */
   /* ================================================= */
@@ -350,75 +466,75 @@ export function TasksScreen() {
     }, [taskStatus]);
 
 
-/* ================================================= */
-/* COMPLETE FROM DETAILS                             */
-/* ================================================= */
+  /* ================================================= */
+  /* COMPLETE FROM DETAILS                             */
+  /* ================================================= */
 
-const handleToggleFromDetails =
-  useCallback(
-    (task: Task) => {
+  const handleToggleFromDetails =
+    useCallback(
+      (task: Task) => {
 
-      if (taskStatus === 'loading') {
-        return;
-      }
-
-
-      /*
-       * IMPORTANT:
-       *
-       * selectedTask is independent from Redux.
-       *
-       * Redux updates the task list, but the
-       * details sheet was still holding the
-       * previous task object.
-       *
-       * Update selectedTask immediately so
-       * the details sheet reflects the new
-       * status without closing/reopening it.
-       */
-      setSelectedTask(
-        previousTask => {
-
-          if (
-            !previousTask ||
-            previousTask.id !== task.id
-          ) {
-            return previousTask;
-          }
+        if (taskStatus === 'loading') {
+          return;
+        }
 
 
-          return {
-            ...previousTask,
+        /*
+         * IMPORTANT:
+         *
+         * selectedTask is independent from Redux.
+         *
+         * Redux updates the task list, but the
+         * details sheet was still holding the
+         * previous task object.
+         *
+         * Update selectedTask immediately so
+         * the details sheet reflects the new
+         * status without closing/reopening it.
+         */
+        setSelectedTask(
+          previousTask => {
 
-            status:
-              previousTask.status ===
-              'completed'
-                ? 'pending'
-                : 'completed',
-          };
-        },
-      );
+            if (
+              !previousTask ||
+              previousTask.id !== task.id
+            ) {
+              return previousTask;
+            }
 
 
-      /*
-       * Keep the existing Redux flow.
-       *
-       * This is still responsible for:
-       *
-       * - Redux state
-       * - SQLite update
-       * - offline queue
-       * - Firebase sync
-       */
-      dispatch(
-        toggleTask(task.id),
-      );
-    },
-    [
-      dispatch,
-      taskStatus,
-    ],
-  );
+            return {
+              ...previousTask,
+
+              status:
+                previousTask.status ===
+                  'completed'
+                  ? 'pending'
+                  : 'completed',
+            };
+          },
+        );
+
+
+        /*
+         * Keep the existing Redux flow.
+         *
+         * This is still responsible for:
+         *
+         * - Redux state
+         * - SQLite update
+         * - offline queue
+         * - Firebase sync
+         */
+        dispatch(
+          toggleTask(task.id),
+        );
+      },
+      [
+        dispatch,
+        taskStatus,
+      ],
+    );
 
   /* ================================================= */
   /* EDIT                                              */
@@ -578,9 +694,9 @@ const handleToggleFromDetails =
   return (
     <View style={styles.safeArea}>
 
-<StatusBar
-  barStyle="dark-content"
-/>
+      <StatusBar
+        barStyle="dark-content"
+      />
 
 
       <FlatList
@@ -681,7 +797,7 @@ const handleToggleFromDetails =
 
 
             {/* PRODUCTIVITY   */}
-    
+
 
             <ProductivityCard
               total={total}
@@ -691,8 +807,8 @@ const handleToggleFromDetails =
             />
 
 
-        {/* TASK HEADER    */}
-   
+            {/* TASK HEADER    */}
+
 
             <View
               style={
@@ -727,7 +843,7 @@ const handleToggleFromDetails =
             </View>
 
 
-        {/* FILTERS  */}
+            {/* FILTERS  */}
 
 
             <View
@@ -940,16 +1056,16 @@ const handleToggleFromDetails =
       />
 
 
-  
 
-    <TaskDetailsSheet
-  visible={detailsVisible}
-  task={selectedTask}
-  onClose={handleCloseDetails}
-  onToggle={handleToggleFromDetails}
-  onEdit={handleEditTask}
-  onDelete={handleDeleteRequest}
-/>
+
+      <TaskDetailsSheet
+        visible={detailsVisible}
+        task={selectedTask}
+        onClose={handleCloseDetails}
+        onToggle={handleToggleFromDetails}
+        onEdit={handleEditTask}
+        onDelete={handleDeleteRequest}
+      />
 
 
 
@@ -972,9 +1088,9 @@ const handleToggleFromDetails =
         }
       />
 
-        {/* DATABASE / TASK OPERATION LOADING                 */}
-        
-        { taskStatus ===
+      {/* DATABASE / TASK OPERATION LOADING                 */}
+
+      {taskStatus ===
         'loading' && (
           <Modal
             visible
