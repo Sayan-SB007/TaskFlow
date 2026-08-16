@@ -1,97 +1,348 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# TaskFlow
 
-# Getting Started
+TaskFlow is a cross-platform React Native task-management application
+built with a modular, offline-first architecture.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+It was developed for a React Native Team Lead take-home assignment
+covering authentication, task management, offline
+storage/synchronization, notifications, modular architecture, Redux
+Toolkit, React Navigation, performance, and production-oriented code
+organization. fileciteturn88file0
 
-## Step 1: Start Metro
+## Features
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+### Authentication
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+-   Firebase email/password authentication.
+-   Session persistence.
+-   Login.
+-   Registration.
+-   Logout.
 
-```sh
-# Using npm
-npm start
+### Task Management
 
-# OR using Yarn
-yarn start
+-   Create tasks.
+-   Edit tasks.
+-   Delete tasks.
+-   Mark complete/incomplete.
+-   Task details.
+-   Priority: Low / Medium / High.
+-   Optional due date.
+-   Optional due time.
+-   Basic validation.
+-   Native date/time pickers.
+
+### Offline-first
+
+-   SQLite local persistence.
+-   Tasks remain available offline.
+-   Local changes are queued.
+-   Firestore synchronization occurs when connectivity returns.
+-   Sync status is surfaced to the user.
+
+### Navigation
+
+-   Authentication flow.
+-   Main application flow.
+-   Task list.
+-   Task details.
+-   Task form.
+
+### State Management
+
+-   Redux Toolkit.
+
+### Performance
+
+-   FlatList for task lists.
+-   Lazy loading for applicable screens.
+
+### Notifications
+
+-   Local task reminders are part of the notification implementation.
+-   Firebase Cloud Messaging/server push is a bonus/future enhancement.
+
+The assignment explicitly requires local task reminders and lists
+Firebase Cloud Messaging server push as a bonus. fileciteturn88file0
+
+## Architecture
+
+``` text
+                    ┌──────────────────┐
+                    │   React Native   │
+                    │       UI         │
+                    └────────┬─────────┘
+                             │
+                    ┌────────▼─────────┐
+                    │ React Navigation │
+                    └────────┬─────────┘
+                             │
+                    ┌────────▼─────────┐
+                    │ Redux Toolkit    │
+                    └────────┬─────────┘
+                             │
+                 ┌───────────┴───────────┐
+                 │                       │
+        ┌────────▼────────┐    ┌────────▼────────┐
+        │ SQLite / Local  │    │ Firebase Auth   │
+        │ Persistence     │    │ + Firestore     │
+        └────────┬────────┘    └────────┬────────┘
+                 │                      │
+                 └──────────┬───────────┘
+                            │
+                    ┌───────▼────────┐
+                    │ Sync / NetInfo │
+                    └────────────────┘
 ```
 
-## Step 2: Build and run your app
+### Offline synchronization
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
+``` text
+User action
+    ↓
+SQLite/local state
+    ↓
+Pending operation
+    ↓
+Network available?
+   / \
+ No   Yes
+ |     |
+Keep   Sync
+queue  Firestore
+ |      |
+ └──────┘
+    ↓
+Synced
 ```
 
-### iOS
+## Folder Structure
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
+``` text
+TaskFlow/
+├── .vscode/
+├── android/
+├── docs/
+│   ├── prd.md
+│   ├── architecture.md
+│   ├── rules.md
+│   ├── phases.md
+│   ├── design.md
+│   └── memory.md
+├── ios/
+├── src/
+│   ├── app/
+│   │   ├── providers/
+│   │   ├── appSlice.ts
+│   │   └── store.ts
+│   ├── components/
+│   ├── config/
+│   ├── database/
+│   ├── features/
+│   ├── hooks/
+│   ├── navigation/
+│   ├── theme/
+│   ├── types/
+│   └── utils/
+├── App.tsx
+├── .gitignore
+├── package.json
+└── README.md
 ```
 
-Then, and every time you update your native dependencies, run:
+This structure keeps reusable UI, feature logic, application state,
+navigation, persistence, configuration, and theme code separated.
 
-```sh
-bundle exec pod install
+## Main Libraries
+
+  Library / Technology                       Purpose
+  ------------------------------------------ -----------------------------------
+  React Native                               Cross-platform mobile application
+  TypeScript                                 Type safety
+  Redux Toolkit                              Application state
+  React Navigation                           Navigation
+  Firebase Authentication                    Authentication
+  Cloud Firestore                            Remote task synchronization
+  SQLite                                     Offline/local task persistence
+  NetInfo                                    Connectivity detection
+  `@react-native-community/datetimepicker`   Native date/time picker
+  Local notification library                 Task reminders
+
+## Requirements
+
+Recommended environment:
+
+-   Node.js version compatible with the installed React Native version.
+-   npm.
+-   Android Studio / Android SDK for Android.
+-   Xcode for iOS development on macOS.
+-   Firebase project configured for the application.
+
+Check the project's `package.json` for the exact dependency versions.
+
+## Installation
+
+Clone the repository:
+
+``` bash
+git clone <your-repository-url>
+cd TaskFlow
 ```
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+Install dependencies:
 
-```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
+``` bash
+npm install
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+For Android:
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+``` bash
+npx react-native run-android
+```
 
-## Step 3: Modify your app
+For iOS:
 
-Now that you have successfully run the app, let's make changes!
+``` bash
+cd ios
+pod install
+cd ..
+npx react-native run-ios
+```
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+Use the commands appropriate for the installed React Native version and
+local development environment.
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+## Type Checking
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+Run:
 
-## Congratulations! :tada:
+``` bash
+npx tsc --noEmit
+```
 
-You've successfully run and modified your React Native App. :partying_face:
+The project should pass TypeScript validation before submission.
 
-### Now what?
+## Firebase Setup
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+Configure:
 
-# Troubleshooting
+-   Firebase Authentication.
+-   Cloud Firestore.
+-   Android/iOS Firebase application configuration.
 
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+Recommended Firestore ownership rule:
 
-# Learn More
+``` text
+rules_version = '2';
 
-To learn more about React Native, take a look at the following resources:
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId}/tasks/{taskId} {
+      allow read, write: if request.auth != null
+                          && request.auth.uid == userId;
+    }
+  }
+}
+```
 
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+Never use unrestricted production rules.
+
+## Environment Configuration
+
+The assignment requires development, staging, and production environment
+support and sample environment files. fileciteturn88file0
+
+Recommended committed examples:
+
+``` text
+.env.example
+.env.development.example
+.env.staging.example
+.env.production.example
+```
+
+Actual environment files should not be committed.
+
+Example:
+
+``` env
+FIREBASE_API_KEY=
+FIREBASE_AUTH_DOMAIN=
+FIREBASE_PROJECT_ID=
+FIREBASE_STORAGE_BUCKET=
+FIREBASE_MESSAGING_SENDER_ID=
+FIREBASE_APP_ID=
+```
+
+Use the project's actual configuration mechanism when wiring these
+values into native and JavaScript code.
+
+## Offline Testing
+
+To test offline behavior:
+
+1.  Log in.
+2.  Load the task list.
+3.  Disable network connectivity.
+4.  Create/edit/delete tasks.
+5.  Confirm changes remain visible locally.
+6.  Re-enable connectivity.
+7.  Confirm pending operations synchronize to Firestore.
+8.  Confirm sync status returns to synced.
+
+## Notification Testing
+
+For a task reminder:
+
+1.  Create a task.
+2.  Select a due date.
+3.  Select a due time.
+4.  Save the task.
+5.  Keep the task reminder scheduled.
+6.  Verify the local notification.
+7.  Edit/delete the task and verify reminder handling.
+
+## Known Limitations
+
+The following should be verified before final submission:
+
+-   Development/staging/production environment configuration must be
+    demonstrated clearly.
+-   Dark/light theme must be verified across all major screens.
+-   Firebase Cloud Messaging server push is a bonus requirement and may
+    remain outside the current scope.
+-   iOS notification behavior requires testing on an appropriate iOS
+    environment.
+-   Exact dependency compatibility should follow the versions installed
+    in `package.json`.
+
+## Security Notes
+
+Do not commit:
+
+``` text
+.env
+.env.local
+private keys
+passwords
+service-account credentials
+local machine secrets
+```
+
+Firebase client configuration values are not a substitute for Firestore
+security rules. Data access must be enforced by Firebase Authentication
+and Firestore rules.
+
+## Documentation
+
+Detailed project documentation:
+
+-   [`docs/prd.md`](docs/prd.md)
+-   [`docs/architecture.md`](docs/architecture.md)
+-   [`docs/rules.md`](docs/rules.md)
+-   [`docs/phases.md`](docs/phases.md)
+-   [`docs/design.md`](docs/design.md)
+-   [`docs/memory.md`](docs/memory.md)
+
+

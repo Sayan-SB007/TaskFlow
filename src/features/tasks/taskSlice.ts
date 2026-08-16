@@ -16,6 +16,15 @@ import {
   syncTasks,
 } from '../sync/syncService';
 
+import {
+  scheduleTaskReminder,
+  cancelTaskReminder,
+} from '../notifications/notificationService';
+
+
+/* ================================================= */
+/* STATE                                             */
+/* ================================================= */
 
 interface TaskState {
   items: Task[];
@@ -40,11 +49,19 @@ interface TaskState {
 }
 
 
+/* ================================================= */
+/* PAYLOAD                                           */
+/* ================================================= */
+
 interface TaskPayload {
   title: string;
+
   description?: string;
+
   priority: TaskPriority;
+
   dueDate: string;
+
   dueTime?: string;
 }
 
@@ -54,18 +71,28 @@ interface TaskPayload {
 /* ================================================= */
 
 export const loadTasks = createAsyncThunk(
+
   'tasks/loadTasks',
 
-  async (_, {rejectWithValue}) => {
+  async (
+    _,
+    {rejectWithValue},
+  ) => {
+
     try {
+
       return await taskService.getTasks();
 
     } catch (error) {
+
       return rejectWithValue(
         getErrorMessage(error),
       );
+
     }
+
   },
+
 );
 
 
@@ -74,11 +101,15 @@ export const loadTasks = createAsyncThunk(
 /* ================================================= */
 
 export const addTask = createAsyncThunk(
+
   'tasks/addTask',
 
   async (
+
     payload: TaskPayload,
+
     {rejectWithValue},
+
   ) => {
 
     try {
@@ -89,7 +120,8 @@ export const addTask = createAsyncThunk(
 
       const task: Task = {
 
-        id: `task-${Date.now()}`,
+        id:
+          `task-${Date.now()}`,
 
         title:
           payload.title.trim(),
@@ -114,18 +146,13 @@ export const addTask = createAsyncThunk(
 
         updatedAt:
           timestamp,
+
       };
 
 
-      /*
-       * STEP 1
-       *
-       * Save task to SQLite.
-       *
-       * taskService.createTask()
-       * should mark this task as pending
-       * for synchronization.
-       */
+      /* ============================================= */
+      /* STEP 1 — SAVE TO SQLITE                       */
+      /* ============================================= */
 
       const createdTask =
         await taskService.createTask(
@@ -133,31 +160,48 @@ export const addTask = createAsyncThunk(
         );
 
 
-      /*
-       * STEP 2
-       *
-       * Immediately synchronize
-       * SQLite → Firestore.
-       *
-       * If offline, syncTasks()
-       * simply returns and the task
-       * remains pending in SQLite.
-       *
-       * When internet comes back,
-       * syncService will retry it.
-       */
+      /* ============================================= */
+      /* STEP 2 — SCHEDULE NOTIFICATION                */
+      /* ============================================= */
 
+      /*
+       * Notification scheduling is intentionally
+       * non-blocking.
+       *
+       * The task should still be created even if
+       * notification scheduling fails.
+       */
+      void scheduleTaskReminder(
+        createdTask,
+      ).catch(error => {
+
+        console.warn(
+          'NOTIFICATION: Failed to schedule created task reminder',
+          error,
+        );
+
+      });
+
+
+      /* ============================================= */
+      /* STEP 3 — SYNC TO FIREBASE                     */
+      /* ============================================= */
+
+      /*
+       * Existing offline-first behaviour is
+       * preserved.
+       *
+       * If offline, syncTasks() returns and the
+       * task remains pending locally.
+       */
       void syncTasks();
 
 
       /*
-       * IMPORTANT:
-       *
        * Return the local task immediately.
-       * We don't make the UI wait for
-       * Firestore.
+       *
+       * The UI does not wait for Firebase.
        */
-
       return createdTask;
 
 
@@ -170,6 +214,7 @@ export const addTask = createAsyncThunk(
     }
 
   },
+
 );
 
 
@@ -193,6 +238,10 @@ export const updateTask = createAsyncThunk(
 
     try {
 
+      /* ============================================= */
+      /* GET EXISTING TASK                             */
+      /* ============================================= */
+
       const existing =
         await taskService.getTaskById(
           payload.id,
@@ -207,6 +256,10 @@ export const updateTask = createAsyncThunk(
 
       }
 
+
+      /* ============================================= */
+      /* BUILD UPDATED TASK                            */
+      /* ============================================= */
 
       const task: Task = {
 
@@ -229,14 +282,13 @@ export const updateTask = createAsyncThunk(
 
         updatedAt:
           new Date().toISOString(),
+
       };
 
 
-      /*
-       * STEP 1
-       *
-       * Update SQLite.
-       */
+      /* ============================================= */
+      /* STEP 1 — UPDATE SQLITE                       */
+      /* ============================================= */
 
       const updatedTask =
         await taskService.updateTask(
@@ -244,12 +296,37 @@ export const updateTask = createAsyncThunk(
         );
 
 
+      /* ============================================= */
+      /* STEP 2 — UPDATE NOTIFICATION                 */
+      /* ============================================= */
+
       /*
-       * STEP 2
+       * scheduleTaskReminder() cancels the previous
+       * notification before creating the new one.
        *
-       * Immediately push the
-       * pending change to Firestore.
+       * Therefore:
+       *
+       * Old date/time
+       *      ↓
+       * cancel old reminder
+       *      ↓
+       * schedule new reminder
        */
+      void scheduleTaskReminder(
+        updatedTask,
+      ).catch(error => {
+
+        console.warn(
+          'NOTIFICATION: Failed to reschedule updated task',
+          error,
+        );
+
+      });
+
+
+      /* ============================================= */
+      /* STEP 3 — SYNC TO FIREBASE                     */
+      /* ============================================= */
 
       void syncTasks();
 
@@ -288,6 +365,10 @@ export const toggleTask = createAsyncThunk(
 
     try {
 
+      /* ============================================= */
+      /* GET EXISTING TASK                             */
+      /* ============================================= */
+
       const task =
         await taskService.getTaskById(
           id,
@@ -303,11 +384,9 @@ export const toggleTask = createAsyncThunk(
       }
 
 
-      /*
-       * STEP 1
-       *
-       * Update SQLite.
-       */
+      /* ============================================= */
+      /* STEP 1 — UPDATE SQLITE                       */
+      /* ============================================= */
 
       const updatedTask =
         await taskService.toggleTask(
@@ -315,12 +394,36 @@ export const toggleTask = createAsyncThunk(
         );
 
 
+      /* ============================================= */
+      /* STEP 2 — UPDATE NOTIFICATION                 */
+      /* ============================================= */
+
       /*
-       * STEP 2
+       * If the task became completed:
        *
-       * Immediately synchronize
-       * the changed task with Firestore.
+       *     cancel reminder
+       *
+       * If it became incomplete:
+       *
+       *     schedule reminder again
+       *
+       * scheduleTaskReminder() handles both cases.
        */
+      void scheduleTaskReminder(
+        updatedTask,
+      ).catch(error => {
+
+        console.warn(
+          'NOTIFICATION: Failed to update task reminder',
+          error,
+        );
+
+      });
+
+
+      /* ============================================= */
+      /* STEP 3 — SYNC TO FIREBASE                     */
+      /* ============================================= */
 
       void syncTasks();
 
@@ -359,27 +462,40 @@ export const deleteTask = createAsyncThunk(
 
     try {
 
-      /*
-       * STEP 1
-       *
-       * Delete/mark deleted in SQLite.
-       *
-       * Your taskRepository can then
-       * keep the deleted task pending
-       * until Firestore confirms deletion.
-       */
+      /* ============================================= */
+      /* STEP 1 — DELETE FROM SQLITE                  */
+      /* ============================================= */
 
       await taskService.deleteTask(
         id,
       );
 
 
+      /* ============================================= */
+      /* STEP 2 — CANCEL NOTIFICATION                 */
+      /* ============================================= */
+
       /*
-       * STEP 2
+       * Delete the local reminder immediately.
        *
-       * Immediately synchronize
-       * the deletion with Firestore.
+       * This prevents a notification from appearing
+       * for a task that no longer exists.
        */
+      void cancelTaskReminder(
+        id,
+      ).catch(error => {
+
+        console.warn(
+          'NOTIFICATION: Failed to cancel deleted task reminder',
+          error,
+        );
+
+      });
+
+
+      /* ============================================= */
+      /* STEP 3 — SYNC DELETE TO FIREBASE             */
+      /* ============================================= */
 
       void syncTasks();
 
@@ -408,13 +524,17 @@ const initialState: TaskState = {
 
   items: [],
 
-  filter: 'all',
+  filter:
+    'all',
 
-  status: 'idle',
+  status:
+    'idle',
 
-  operation: null,
+  operation:
+    null,
 
-  error: null,
+  error:
+    null,
 
 };
 
@@ -425,11 +545,16 @@ const initialState: TaskState = {
 
 const taskSlice = createSlice({
 
-  name: 'tasks',
+  name:
+    'tasks',
 
   initialState,
 
   reducers: {
+
+    /* ============================================= */
+    /* SET FILTER                                    */
+    /* ============================================= */
 
     setFilter: (
 
@@ -445,388 +570,429 @@ const taskSlice = createSlice({
     },
 
 
-    clearTaskError: state => {
+    /* ============================================= */
+    /* CLEAR ERROR                                    */
+    /* ============================================= */
 
-      state.error = null;
+    clearTaskError:
+      state => {
+
+        state.error =
+          null;
+
+      },
+
+  },
+
+
+  /* ================================================= */
+  /* EXTRA REDUCERS                                   */
+  /* ================================================= */
+
+  extraReducers:
+    builder => {
+
+
+      /* ============================================= */
+      /* LOAD TASKS                                    */
+      /* ============================================= */
+
+      builder.addCase(
+
+        loadTasks.pending,
+
+        state => {
+
+          state.status =
+            'loading';
+
+          state.operation =
+            'load';
+
+          state.error =
+            null;
+
+        },
+
+      );
+
+
+      builder.addCase(
+
+        loadTasks.fulfilled,
+
+        (
+          state,
+          action,
+        ) => {
+
+          state.items =
+            action.payload;
+
+          state.status =
+            'success';
+
+          state.operation =
+            null;
+
+          state.error =
+            null;
+
+        },
+
+      );
+
+
+      builder.addCase(
+
+        loadTasks.rejected,
+
+        (
+          state,
+          action,
+        ) => {
+
+          state.status =
+            'error';
+
+          state.operation =
+            null;
+
+          state.error =
+            action.payload as string;
+
+        },
+
+      );
+
+
+      /* ============================================= */
+      /* ADD TASK                                      */
+      /* ============================================= */
+
+      builder.addCase(
+
+        addTask.pending,
+
+        state => {
+
+          state.status =
+            'loading';
+
+          state.operation =
+            'create';
+
+          state.error =
+            null;
+
+        },
+
+      );
+
+
+      builder.addCase(
+
+        addTask.fulfilled,
+
+        (
+          state,
+          action,
+        ) => {
+
+          state.items.unshift(
+            action.payload,
+          );
+
+          state.status =
+            'success';
+
+          state.operation =
+            null;
+
+          state.error =
+            null;
+
+        },
+
+      );
+
+
+      builder.addCase(
+
+        addTask.rejected,
+
+        (
+          state,
+          action,
+        ) => {
+
+          state.status =
+            'error';
+
+          state.operation =
+            null;
+
+          state.error =
+            action.payload as string;
+
+        },
+
+      );
+
+
+      /* ============================================= */
+      /* UPDATE TASK                                   */
+      /* ============================================= */
+
+      builder.addCase(
+
+        updateTask.pending,
+
+        state => {
+
+          state.status =
+            'loading';
+
+          state.operation =
+            'update';
+
+          state.error =
+            null;
+
+        },
+
+      );
+
+
+      builder.addCase(
+
+        updateTask.fulfilled,
+
+        (
+          state,
+          action,
+        ) => {
+
+          const index =
+            state.items.findIndex(
+
+              item =>
+                item.id ===
+                action.payload.id,
+
+            );
+
+
+          if (index !== -1) {
+
+            state.items[index] =
+              action.payload;
+
+          }
+
+
+          state.status =
+            'success';
+
+          state.operation =
+            null;
+
+          state.error =
+            null;
+
+        },
+
+      );
+
+
+      builder.addCase(
+
+        updateTask.rejected,
+
+        (
+          state,
+          action,
+        ) => {
+
+          state.status =
+            'error';
+
+          state.operation =
+            null;
+
+          state.error =
+            action.payload as string;
+
+        },
+
+      );
+
+
+      /* ============================================= */
+      /* TOGGLE TASK                                   */
+      /* ============================================= */
+
+      builder.addCase(
+
+        toggleTask.pending,
+
+        state => {
+
+          state.status =
+            'loading';
+
+          state.operation =
+            'toggle';
+
+          state.error =
+            null;
+
+        },
+
+      );
+
+
+      builder.addCase(
+
+        toggleTask.fulfilled,
+
+        (
+          state,
+          action,
+        ) => {
+
+          const index =
+            state.items.findIndex(
+
+              item =>
+                item.id ===
+                action.payload.id,
+
+            );
+
+
+          if (index !== -1) {
+
+            state.items[index] =
+              action.payload;
+
+          }
+
+
+          state.status =
+            'success';
+
+          state.operation =
+            null;
+
+        },
+
+      );
+
+
+      builder.addCase(
+
+        toggleTask.rejected,
+
+        (
+          state,
+          action,
+        ) => {
+
+          state.status =
+            'error';
+
+          state.operation =
+            null;
+
+          state.error =
+            action.payload as string;
+
+        },
+
+      );
+
+
+      /* ============================================= */
+      /* DELETE TASK                                   */
+      /* ============================================= */
+
+      builder.addCase(
+
+        deleteTask.pending,
+
+        state => {
+
+          state.status =
+            'loading';
+
+          state.operation =
+            'delete';
+
+          state.error =
+            null;
+
+        },
+
+      );
+
+
+      builder.addCase(
+
+        deleteTask.fulfilled,
+
+        (
+          state,
+          action,
+        ) => {
+
+          state.items =
+            state.items.filter(
+
+              task =>
+                task.id !==
+                action.payload,
+
+            );
+
+
+          state.status =
+            'success';
+
+          state.operation =
+            null;
+
+          state.error =
+            null;
+
+        },
+
+      );
+
+
+      builder.addCase(
+
+        deleteTask.rejected,
+
+        (
+          state,
+          action,
+        ) => {
+
+          state.status =
+            'error';
+
+          state.operation =
+            null;
+
+          state.error =
+            action.payload as string;
+
+        },
+
+      );
 
     },
-
-  },
-
-
-  extraReducers: builder => {
-
-
-    /* --------------------------------------------- */
-    /* LOAD                                           */
-    /* --------------------------------------------- */
-
-    builder.addCase(
-
-      loadTasks.pending,
-
-      state => {
-
-        state.status =
-          'loading';
-
-        state.operation =
-          'load';
-
-        state.error =
-          null;
-
-      },
-
-    );
-
-
-    builder.addCase(
-
-      loadTasks.fulfilled,
-
-      (state, action) => {
-
-        state.items =
-          action.payload;
-
-        state.status =
-          'success';
-
-        state.operation =
-          null;
-
-        state.error =
-          null;
-
-      },
-
-    );
-
-
-    builder.addCase(
-
-      loadTasks.rejected,
-
-      (state, action) => {
-
-        state.status =
-          'error';
-
-        state.operation =
-          null;
-
-        state.error =
-          action.payload as string;
-
-      },
-
-    );
-
-
-    /* --------------------------------------------- */
-    /* ADD                                            */
-    /* --------------------------------------------- */
-
-    builder.addCase(
-
-      addTask.pending,
-
-      state => {
-
-        state.status =
-          'loading';
-
-        state.operation =
-          'create';
-
-        state.error =
-          null;
-
-      },
-
-    );
-
-
-    builder.addCase(
-
-      addTask.fulfilled,
-
-      (state, action) => {
-
-        state.items.unshift(
-          action.payload,
-        );
-
-        state.status =
-          'success';
-
-        state.operation =
-          null;
-
-        state.error =
-          null;
-
-      },
-
-    );
-
-
-    builder.addCase(
-
-      addTask.rejected,
-
-      (state, action) => {
-
-        state.status =
-          'error';
-
-        state.operation =
-          null;
-
-        state.error =
-          action.payload as string;
-
-      },
-
-    );
-
-
-    /* --------------------------------------------- */
-    /* UPDATE                                         */
-    /* --------------------------------------------- */
-
-    builder.addCase(
-
-      updateTask.pending,
-
-      state => {
-
-        state.status =
-          'loading';
-
-        state.operation =
-          'update';
-
-        state.error =
-          null;
-
-      },
-
-    );
-
-
-    builder.addCase(
-
-      updateTask.fulfilled,
-
-      (state, action) => {
-
-        const index =
-          state.items.findIndex(
-
-            item =>
-              item.id ===
-              action.payload.id,
-
-          );
-
-
-        if (index !== -1) {
-
-          state.items[index] =
-            action.payload;
-
-        }
-
-
-        state.status =
-          'success';
-
-        state.operation =
-          null;
-
-        state.error =
-          null;
-
-      },
-
-    );
-
-
-    builder.addCase(
-
-      updateTask.rejected,
-
-      (state, action) => {
-
-        state.status =
-          'error';
-
-        state.operation =
-          null;
-
-        state.error =
-          action.payload as string;
-
-      },
-
-    );
-
-
-    /* --------------------------------------------- */
-    /* TOGGLE                                         */
-    /* --------------------------------------------- */
-
-    builder.addCase(
-
-      toggleTask.pending,
-
-      state => {
-
-        state.status =
-          'loading';
-
-        state.operation =
-          'toggle';
-
-        state.error =
-          null;
-
-      },
-
-    );
-
-
-    builder.addCase(
-
-      toggleTask.fulfilled,
-
-      (state, action) => {
-
-        const index =
-          state.items.findIndex(
-
-            item =>
-              item.id ===
-              action.payload.id,
-
-          );
-
-
-        if (index !== -1) {
-
-          state.items[index] =
-            action.payload;
-
-        }
-
-
-        state.status =
-          'success';
-
-        state.operation =
-          null;
-
-      },
-
-    );
-
-
-    builder.addCase(
-
-      toggleTask.rejected,
-
-      (state, action) => {
-
-        state.status =
-          'error';
-
-        state.operation =
-          null;
-
-        state.error =
-          action.payload as string;
-
-      },
-
-    );
-
-
-    /* --------------------------------------------- */
-    /* DELETE                                         */
-    /* --------------------------------------------- */
-
-    builder.addCase(
-
-      deleteTask.pending,
-
-      state => {
-
-        state.status =
-          'loading';
-
-        state.operation =
-          'delete';
-
-        state.error =
-          null;
-
-      },
-
-    );
-
-
-    builder.addCase(
-
-      deleteTask.fulfilled,
-
-      (state, action) => {
-
-        state.items =
-          state.items.filter(
-
-            task =>
-              task.id !==
-              action.payload,
-
-          );
-
-
-        state.status =
-          'success';
-
-        state.operation =
-          null;
-
-        state.error =
-          null;
-
-      },
-
-    );
-
-
-    builder.addCase(
-
-      deleteTask.rejected,
-
-      (state, action) => {
-
-        state.status =
-          'error';
-
-        state.operation =
-          null;
-
-        state.error =
-          action.payload as string;
-
-      },
-
-    );
-
-  },
 
 });
 
@@ -836,11 +1002,8 @@ const taskSlice = createSlice({
 /* ================================================= */
 
 export const {
-
   setFilter,
-
   clearTaskError,
-
 } = taskSlice.actions;
 
 
@@ -859,12 +1022,16 @@ function getErrorMessage(
   error: unknown,
 ): string {
 
-  if (error instanceof Error) {
+  if (
+    error instanceof Error
+  ) {
 
     return error.message;
 
   }
 
-  return 'Something went wrong while processing the task.';
 
+  return (
+    'Something went wrong while processing the task.'
+  );
 }

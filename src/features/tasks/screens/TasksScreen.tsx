@@ -81,13 +81,12 @@ import {
   shadows,
 } from '../../../theme/shadows';
 
-import {
-  debugTasks,
-} from '../../../database/debug';
+
 
 import {
   firebaseAuth,
 } from '../../../config/firebase';
+import { debugTasks } from '../../../database/debug';
 
 
 /* ================================================= */

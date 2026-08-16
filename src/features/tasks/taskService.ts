@@ -1,7 +1,6 @@
 import type {Task} from './types';
 
 import {taskRepository} from '../../database/repositories/taskRepository';
-
 /**
  * TaskService
  *

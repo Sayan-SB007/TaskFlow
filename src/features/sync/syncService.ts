@@ -13,13 +13,12 @@ import {
   firestoreDb,
 } from '../../config/firebase';
 
-import {
-  taskRepository,
-} from '../../database/repositories/taskRepository';
+
 
 import type {
   Task,
 } from '../tasks/types';
+import { taskRepository } from '../../database/repositories/taskRepository';
 
 
 /* ================================================= */
