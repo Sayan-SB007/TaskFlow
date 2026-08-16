@@ -49,21 +49,13 @@ const Stack =
 
 function ScreenLoader() {
   return (
-    <View
-      style={
-        styles.loadingContainer
-      }
-    >
+    <View style={styles.loadingContainer}>
       <ActivityIndicator
         size="large"
         color="#1769E0"
       />
 
-      <Text
-        style={
-          styles.loadingText
-        }
-      >
+      <Text style={styles.loadingText}>
         Loading...
       </Text>
     </View>
@@ -81,21 +73,19 @@ export function AuthNavigator() {
         headerShown: false,
       }}
     >
-
       {/* ================================================= */}
       {/* LOGIN                                             */}
       {/* ================================================= */}
 
       <Stack.Screen
         name="Login"
+        options={{
+          headerShown: false,
+        }}
       >
-        {() => (
-          <Suspense
-            fallback={
-              <ScreenLoader />
-            }
-          >
-            <LazyLoginScreen />
+        {props => (
+          <Suspense fallback={<ScreenLoader />}>
+            <LazyLoginScreen {...props} />
           </Suspense>
         )}
       </Stack.Screen>
@@ -106,18 +96,16 @@ export function AuthNavigator() {
 
       <Stack.Screen
         name="Signup"
+        options={{
+          headerShown: false,
+        }}
       >
-        {() => (
-          <Suspense
-            fallback={
-              <ScreenLoader />
-            }
-          >
-            <LazySignupScreen />
+        {props => (
+          <Suspense fallback={<ScreenLoader />}>
+            <LazySignupScreen {...props} />
           </Suspense>
         )}
       </Stack.Screen>
-
     </Stack.Navigator>
   );
 }
@@ -127,26 +115,17 @@ export function AuthNavigator() {
 /* ================================================= */
 
 const styles = StyleSheet.create({
-
   loadingContainer: {
     flex: 1,
-
     alignItems: 'center',
-
     justifyContent: 'center',
-
-    backgroundColor:
-      '#F7F8FA',
+    backgroundColor: '#F7F8FA',
   },
 
   loadingText: {
     marginTop: 10,
-
     fontSize: 13,
-
     color: '#64748B',
-
     fontWeight: '600',
   },
-
 });
