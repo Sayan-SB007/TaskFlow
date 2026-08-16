@@ -642,7 +642,7 @@ const styles =
     /* ================================================= */
 
     backdrop: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
 
       /*
        * The overlay supplies the dimming.

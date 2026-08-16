@@ -1200,9 +1200,9 @@ export function TasksScreen() {
 
       <StatusBar
         barStyle="dark-content"
-        backgroundColor={
-          lightTheme.colors.background
-        }
+        // backgroundColor={
+        //   lightTheme.colors.background
+        // }
       />
 
 
@@ -2259,7 +2259,7 @@ const styles =
       justifyContent:
         'center',
 
-      ...shadows.sm,
+      ...shadows.card,
     },
 
 
@@ -2868,7 +2868,7 @@ const styles =
      * transparent.
      */
     notificationBackdrop: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
 
       backgroundColor:
         'transparent',
