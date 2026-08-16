@@ -7,7 +7,7 @@ It was developed for a React Native Team Lead take-home assignment
 covering authentication, task management, offline
 storage/synchronization, notifications, modular architecture, Redux
 Toolkit, React Navigation, performance, and production-oriented code
-organization. fileciteturn88file0
+organization. 
 
 ## Features
 
@@ -63,7 +63,7 @@ organization. fileciteturn88file0
 -   Firebase Cloud Messaging/server push is a bonus/future enhancement.
 
 The assignment explicitly requires local task reminders and lists
-Firebase Cloud Messaging server push as a bonus. fileciteturn88file0
+Firebase Cloud Messaging server push as a bonus.
 
 ## Architecture
 
@@ -251,7 +251,7 @@ Never use unrestricted production rules.
 ## Environment Configuration
 
 The assignment requires development, staging, and production environment
-support and sample environment files. fileciteturn88file0
+support and sample environment files. 
 
 Recommended committed examples:
 

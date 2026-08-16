@@ -94,7 +94,7 @@
 -   Firebase Cloud Messaging server push.
 
 The assignment identifies local task reminders as a requirement and FCM
-server push as a bonus. fileciteturn88file0
+server push as a bonus.  
 
 ## Phase 9 --- Environment Configuration
 
@@ -105,7 +105,7 @@ The assignment requires:
 -   Development environment.
 -   Staging environment.
 -   Production environment.
--   Sample `.env` files for each environment. fileciteturn88file0
+-   Sample `.env` files for each environment.  
 
 Before final submission, verify that the project can clearly explain how
 each environment is selected and run.
@@ -114,7 +114,7 @@ each environment is selected and run.
 
 ### Remaining / Verify
 
-The assignment requires dark/light mode. fileciteturn88file0
+The assignment requires dark/light mode.  
 
 Verify:
 
@@ -175,4 +175,4 @@ Required deliverables include:
 -   Environment setup.
 -   Known limitations.
 -   Sample environment files.
--   Loom walkthrough. fileciteturn88file0
+-   Loom walkthrough.  

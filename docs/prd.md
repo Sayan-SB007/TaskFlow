@@ -11,7 +11,7 @@ This document is aligned with the React Native Team Lead take-home
 assignment, which requires authentication, task management, offline
 storage/sync, push notifications, modular architecture, Redux Toolkit,
 React Navigation, multi-environment configuration, theming, FlatList
-optimization, and lazy-loaded screens. fileciteturn88file0
+optimization, and lazy-loaded screens.  
 
 ## 2. Product Goals
 
@@ -85,7 +85,7 @@ Local task reminders are supported/planned for tasks with a due
 date/time.
 
 The assignment also lists server push using Firebase Cloud Messaging as
-a bonus requirement. fileciteturn88file0
+a bonus requirement.  
 
 ### 3.5 Navigation
 
@@ -142,7 +142,7 @@ The project should satisfy the following assignment areas:
 -   FlatList optimization.
 -   Lazy-loaded screens.
 -   Production-ready folder structure.
--   README and environment documentation. fileciteturn88file0
+-   README and environment documentation.  
 
 ## 7. Out of Scope / Future Enhancements
 
