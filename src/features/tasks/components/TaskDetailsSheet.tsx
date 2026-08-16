@@ -12,6 +12,9 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 
+import FontAwesome6 from
+  '@react-native-vector-icons/fontawesome6/static';
+
 import type {
   Task,
 } from '../types';
@@ -56,42 +59,46 @@ export function TaskDetailsSheet({
   onDelete,
 }: TaskDetailsSheetProps) {
 
-  /*
-   * Required so the bottom actions stay above
-   * Android navigation / gesture area.
-   */
   const insets =
     useSafeAreaInsets();
 
 
   /*
-   * Don't render the modal when there is
-   * no selected task.
+   * Keep hooks above the conditional return.
+   *
+   * This is important for React's Rules of Hooks.
    */
   if (!task) {
     return null;
   }
 
 
-  const isCompleted =
-    task.status === 'completed';
+  const completed =
+    task.status ===
+    'completed';
 
 
   return (
     <Modal
-      visible={visible}
+      visible={
+        visible
+      }
+
       transparent
+
       animationType="slide"
+
       statusBarTranslucent
-      onRequestClose={onClose}
+
+      onRequestClose={
+        onClose
+      }
     >
 
-      {/* ================================================= */}
-      {/* MODAL OVERLAY                                     */}
-      {/* ================================================= */}
-
       <View
-        style={styles.overlay}
+        style={
+          styles.overlay
+        }
       >
 
         {/* ================================================= */}
@@ -99,13 +106,18 @@ export function TaskDetailsSheet({
         {/* ================================================= */}
 
         <Pressable
-          style={styles.backdrop}
-          onPress={onClose}
+          style={
+            styles.backdrop
+          }
+
+          onPress={
+            onClose
+          }
         />
 
 
         {/* ================================================= */}
-        {/* BOTTOM SHEET                                      */}
+        {/* SHEET                                              */}
         {/* ================================================= */}
 
         <View
@@ -113,10 +125,6 @@ export function TaskDetailsSheet({
             styles.sheet,
 
             {
-              /*
-               * Keep the sheet above the Android
-               * navigation / gesture area.
-               */
               paddingBottom:
                 Math.max(
                   insets.bottom,
@@ -131,7 +139,9 @@ export function TaskDetailsSheet({
           {/* ================================================= */}
 
           <View
-            style={styles.handle}
+            style={
+              styles.handle
+            }
           />
 
 
@@ -140,7 +150,9 @@ export function TaskDetailsSheet({
           {/* ================================================= */}
 
           <View
-            style={styles.header}
+            style={
+              styles.header
+            }
           >
 
             <View
@@ -156,6 +168,7 @@ export function TaskDetailsSheet({
               >
                 Task details
               </Text>
+
 
               <Text
                 style={
@@ -173,21 +186,30 @@ export function TaskDetailsSheet({
             {/* ================================================= */}
 
             <Pressable
-              onPress={onClose}
+              onPress={
+                onClose
+              }
+
               style={
                 styles.closeButton
               }
+
               accessibilityRole="button"
-              accessibilityLabel="Close task details"
+
+              accessibilityLabel={
+                'Close task details'
+              }
             >
 
-              <Text
-                style={
-                  styles.closeText
+              <FontAwesome6
+                name="xmark"
+                size={18}
+                color={
+                  lightTheme.colors
+                    .textSecondary
                 }
-              >
-                ×
-              </Text>
+                iconStyle="solid"
+              />
 
             </Pressable>
 
@@ -199,40 +221,37 @@ export function TaskDetailsSheet({
           {/* ================================================= */}
 
           <View
-            style={styles.taskRow}
+            style={
+              styles.taskRow
+            }
           >
 
-            {/* ================================================= */}
-            {/* STATUS                                             */}
-            {/* ================================================= */}
+            {/* STATUS */}
 
             <View
               style={[
                 styles.statusCircle,
 
-                isCompleted &&
+                completed &&
                   styles.statusCircleCompleted,
               ]}
             >
 
-              {isCompleted && (
+              {completed ? (
 
-                <Text
-                  style={
-                    styles.checkmark
-                  }
-                >
-                  ✓
-                </Text>
+                <FontAwesome6
+                  name="check"
+                  size={15}
+                  color="#FFFFFF"
+                  iconStyle="solid"
+                />
 
-              )}
+              ) : null}
 
             </View>
 
 
-            {/* ================================================= */}
-            {/* TASK CONTENT                                      */}
-            {/* ================================================= */}
+            {/* CONTENT */}
 
             <View
               style={
@@ -244,11 +263,13 @@ export function TaskDetailsSheet({
                 style={[
                   styles.taskTitle,
 
-                  isCompleted &&
+                  completed &&
                     styles.completedTitle,
                 ]}
               >
-                {task.title}
+                {
+                  task.title
+                }
               </Text>
 
 
@@ -259,7 +280,9 @@ export function TaskDetailsSheet({
                     styles.description
                   }
                 >
-                  {task.description}
+                  {
+                    task.description
+                  }
                 </Text>
 
               ) : (
@@ -280,7 +303,7 @@ export function TaskDetailsSheet({
 
 
           {/* ================================================= */}
-          {/* TASK METADATA CARD                                */}
+          {/* METADATA                                          */}
           {/* ================================================= */}
 
           <View
@@ -288,10 +311,6 @@ export function TaskDetailsSheet({
               styles.metadataCard
             }
           >
-
-            {/* ================================================= */}
-            {/* DUE DATE                                           */}
-            {/* ================================================= */}
 
             <MetadataItem
               label="DUE DATE"
@@ -302,10 +321,6 @@ export function TaskDetailsSheet({
             />
 
 
-            {/* ================================================= */}
-            {/* TIME                                               */}
-            {/* ================================================= */}
-
             <MetadataItem
               label="TIME"
               value={
@@ -314,10 +329,6 @@ export function TaskDetailsSheet({
               }
             />
 
-
-            {/* ================================================= */}
-            {/* PRIORITY                                           */}
-            {/* ================================================= */}
 
             <MetadataItem
               label="PRIORITY"
@@ -350,20 +361,25 @@ export function TaskDetailsSheet({
 
             <Pressable
               onPress={() =>
-                onToggle(task)
+                onToggle(
+                  task,
+                )
               }
+
               style={({pressed}) => [
                 styles.primaryButton,
 
-                isCompleted &&
+                completed &&
                   styles.completedButton,
 
                 pressed &&
                   styles.buttonPressed,
               ]}
+
               accessibilityRole="button"
+
               accessibilityLabel={
-                isCompleted
+                completed
                   ? 'Mark task as incomplete'
                   : 'Mark task as complete'
               }
@@ -373,13 +389,15 @@ export function TaskDetailsSheet({
                 style={[
                   styles.primaryButtonText,
 
-                  isCompleted &&
+                  completed &&
                     styles.completedButtonText,
                 ]}
               >
-                {isCompleted
-                  ? 'Mark as incomplete'
-                  : 'Mark as complete'}
+                {
+                  completed
+                    ? 'Mark as incomplete'
+                    : 'Mark as complete'
+                }
               </Text>
 
             </Pressable>
@@ -391,15 +409,20 @@ export function TaskDetailsSheet({
 
             <Pressable
               onPress={() =>
-                onEdit(task)
+                onEdit(
+                  task,
+                )
               }
+
               style={({pressed}) => [
                 styles.secondaryButton,
 
                 pressed &&
                   styles.buttonPressed,
               ]}
+
               accessibilityRole="button"
+
               accessibilityLabel="Edit task"
             >
 
@@ -420,17 +443,31 @@ export function TaskDetailsSheet({
 
             <Pressable
               onPress={() =>
-                onDelete(task)
+                onDelete(
+                  task,
+                )
               }
+
               style={({pressed}) => [
                 styles.deleteButton,
 
                 pressed &&
                   styles.deletePressed,
               ]}
+
               accessibilityRole="button"
+
               accessibilityLabel="Delete task"
             >
+
+              <FontAwesome6
+                name="trash"
+                size={14}
+                color={
+                  lightTheme.colors.danger
+                }
+                iconStyle="solid"
+              />
 
               <Text
                 style={
@@ -482,7 +519,9 @@ function MetadataItem({
           styles.metadataLabel
         }
       >
-        {label}
+        {
+          label
+        }
       </Text>
 
 
@@ -511,12 +550,17 @@ function MetadataItem({
 
 
         <Text
-          numberOfLines={1}
+          numberOfLines={
+            1
+          }
+
           style={
             styles.metadataValue
           }
         >
-          {value}
+          {
+            value
+          }
         </Text>
 
       </View>
@@ -532,7 +576,7 @@ function MetadataItem({
 
 function capitalize(
   value: string,
-) {
+): string {
 
   if (!value) {
     return '';
@@ -549,7 +593,9 @@ function getPriorityColor(
   priority: Task['priority'],
 ) {
 
-  switch (priority) {
+  switch (
+    priority
+  ) {
 
     case 'high':
       return lightTheme.colors.danger;
@@ -580,6 +626,14 @@ const styles =
 
       justifyContent:
         'flex-end',
+
+      /*
+       * Same backdrop as Create Task.
+       * Keeping the dim layer on the full modal container
+       * makes the sheet clearly appear above the task list.
+       */
+      backgroundColor:
+        'rgba(15,18,25,0.52)',
     },
 
 
@@ -588,16 +642,14 @@ const styles =
     /* ================================================= */
 
     backdrop: {
-      /*
-       * Same treatment as Create Task.
-       *
-       * This is what makes the dashboard/list
-       * look darker behind the white sheet.
-       */
-      ...StyleSheet.absoluteFill,
+      ...StyleSheet.absoluteFillObject,
 
+      /*
+       * The overlay supplies the dimming.
+       * This view only catches outside presses.
+       */
       backgroundColor:
-        'rgba(15, 18, 25, 0.52)',
+        'transparent',
     },
 
 
@@ -606,43 +658,33 @@ const styles =
     /* ================================================= */
 
     sheet: {
-      width: '100%',
+      width:
+        '100%',
 
-      /*
-       * Same bottom-sheet sizing philosophy
-       * as the Create/Edit Task sheet.
-       *
-       * Don't force a fixed height.
-       */
-      maxHeight: '88%',
+      maxHeight:
+        '88%',
 
-      /*
-       * White surface makes the details page
-       * clearly sit above the dashboard.
-       */
       backgroundColor:
         lightTheme.colors.surface,
 
-      borderTopLeftRadius: 28,
+      borderTopLeftRadius:
+        28,
 
-      borderTopRightRadius: 28,
+      borderTopRightRadius:
+        28,
 
       paddingTop:
         spacing.md,
 
-      /*
-       * Android elevation.
-       */
-      elevation: 24,
+      elevation:
+        24,
 
-      /*
-       * iOS shadow.
-       */
       shadowColor:
         '#000000',
 
       shadowOffset: {
         width: 0,
+
         height: -8,
       },
 
@@ -651,7 +693,6 @@ const styles =
 
       shadowRadius:
         20,
-
       /*
        * Keep the rounded top corners clean.
        */
@@ -664,13 +705,17 @@ const styles =
     /* ================================================= */
 
     handle: {
-      alignSelf: 'center',
+      alignSelf:
+        'center',
 
-      width: 42,
+      width:
+        42,
 
-      height: 4,
+      height:
+        4,
 
-      borderRadius: 2,
+      borderRadius:
+        2,
 
       backgroundColor:
         lightTheme.colors.border,
@@ -685,9 +730,11 @@ const styles =
     /* ================================================= */
 
     header: {
-      flexDirection: 'row',
+      flexDirection:
+        'row',
 
-      alignItems: 'center',
+      alignItems:
+        'center',
 
       justifyContent:
         'space-between',
@@ -699,6 +746,7 @@ const styles =
         spacing.lg,
     },
 
+
     headerContent: {
       flex: 1,
 
@@ -706,12 +754,14 @@ const styles =
         spacing.md,
     },
 
+
     headerTitle: {
       ...typography.title,
 
       color:
         lightTheme.colors.text,
     },
+
 
     subtitle: {
       ...typography.caption,
@@ -724,48 +774,40 @@ const styles =
     },
 
 
-    /* ================================================= */
-    /* CLOSE BUTTON                                      */
-    /* ================================================= */
-
     closeButton: {
-      width: 40,
+      width:
+        40,
 
-      height: 40,
+      height:
+        40,
 
-      borderRadius: 20,
+      borderRadius:
+        20,
 
       backgroundColor:
         lightTheme.colors.background,
 
-      alignItems: 'center',
+      alignItems:
+        'center',
 
-      justifyContent: 'center',
+      justifyContent:
+        'center',
 
-      borderWidth: 1,
+      borderWidth:
+        1,
 
       borderColor:
         lightTheme.colors.border,
     },
 
-    closeText: {
-      fontSize: 26,
-
-      lineHeight: 28,
-
-      fontWeight: '300',
-
-      color:
-        lightTheme.colors.textSecondary,
-    },
-
 
     /* ================================================= */
-    /* TASK                                             */
+    /* TASK                                               */
     /* ================================================= */
 
     taskRow: {
-      flexDirection: 'row',
+      flexDirection:
+        'row',
 
       paddingHorizontal:
         spacing.xl,
@@ -774,27 +816,36 @@ const styles =
         spacing.xxl,
     },
 
+
     statusCircle: {
-      width: 32,
+      width:
+        32,
 
-      height: 32,
+      height:
+        32,
 
-      borderRadius: 16,
+      borderRadius:
+        16,
 
-      borderWidth: 1.5,
+      borderWidth:
+        1.5,
 
       borderColor:
         lightTheme.colors.border,
 
-      alignItems: 'center',
+      alignItems:
+        'center',
 
-      justifyContent: 'center',
+      justifyContent:
+        'center',
 
-      marginTop: 2,
+      marginTop:
+        2,
 
       marginRight:
         spacing.md,
     },
+
 
     statusCircleCompleted: {
       backgroundColor:
@@ -804,17 +855,13 @@ const styles =
         lightTheme.colors.primary,
     },
 
-    checkmark: {
-      color: '#FFFFFF',
-
-      fontSize: 17,
-
-      fontWeight: '700',
-    },
 
     taskContent: {
       flex: 1,
+
+      minWidth: 0,
     },
+
 
     taskTitle: {
       ...typography.title,
@@ -822,8 +869,10 @@ const styles =
       color:
         lightTheme.colors.text,
 
-      lineHeight: 25,
+      lineHeight:
+        25,
     },
+
 
     completedTitle: {
       textDecorationLine:
@@ -833,17 +882,20 @@ const styles =
         lightTheme.colors.textMuted,
     },
 
+
     description: {
       ...typography.body,
 
       color:
         lightTheme.colors.textSecondary,
 
-      lineHeight: 22,
+      lineHeight:
+        22,
 
       marginTop:
         spacing.sm,
     },
+
 
     emptyDescription: {
       ...typography.body,
@@ -851,7 +903,8 @@ const styles =
       color:
         lightTheme.colors.textMuted,
 
-      fontStyle: 'italic',
+      fontStyle:
+        'italic',
 
       marginTop:
         spacing.sm,
@@ -863,7 +916,8 @@ const styles =
     /* ================================================= */
 
     metadataCard: {
-      flexDirection: 'row',
+      flexDirection:
+        'row',
 
       marginHorizontal:
         spacing.xl,
@@ -871,7 +925,8 @@ const styles =
       backgroundColor:
         lightTheme.colors.background,
 
-      borderWidth: 1,
+      borderWidth:
+        1,
 
       borderColor:
         lightTheme.colors.border,
@@ -889,11 +944,14 @@ const styles =
         spacing.xxl,
     },
 
+
     metadataItem: {
       flex: 1,
 
-      minWidth: 0,
+      minWidth:
+        0,
     },
+
 
     metadataLabel: {
       ...typography.caption,
@@ -901,21 +959,28 @@ const styles =
       color:
         lightTheme.colors.textMuted,
 
-      fontWeight: '700',
+      fontWeight:
+        '700',
 
-      letterSpacing: 0.6,
+      letterSpacing:
+        0.6,
 
       marginBottom:
         spacing.xs,
     },
 
+
     metadataValueRow: {
-      flexDirection: 'row',
+      flexDirection:
+        'row',
 
-      alignItems: 'center',
+      alignItems:
+        'center',
 
-      minWidth: 0,
+      minWidth:
+        0,
     },
+
 
     metadataValue: {
       ...typography.bodyMedium,
@@ -923,17 +988,23 @@ const styles =
       color:
         lightTheme.colors.text,
 
-      flexShrink: 1,
+      flexShrink:
+        1,
     },
 
+
     priorityDot: {
-      width: 7,
+      width:
+        7,
 
-      height: 7,
+      height:
+        7,
 
-      borderRadius: 4,
+      borderRadius:
+        4,
 
-      marginRight: 6,
+      marginRight:
+        6,
     },
 
 
@@ -950,12 +1021,9 @@ const styles =
     },
 
 
-    /* ================================================= */
-    /* PRIMARY BUTTON                                    */
-    /* ================================================= */
-
     primaryButton: {
-      height: 54,
+      minHeight:
+        54,
 
       borderRadius:
         lightTheme.radius.md,
@@ -969,26 +1037,10 @@ const styles =
       justifyContent:
         'center',
 
-      /*
-       * Small elevation so the action
-       * feels like a primary CTA.
-       */
-      elevation: 2,
-
-      shadowColor:
-        '#000000',
-
-      shadowOffset: {
-        width: 0,
-        height: 2,
-      },
-
-      shadowOpacity:
-        0.10,
-
-      shadowRadius:
-        4,
+      elevation:
+        2,
     },
+
 
     primaryButtonText: {
       ...typography.button,
@@ -998,21 +1050,20 @@ const styles =
     },
 
 
-    /* ================================================= */
-    /* COMPLETED BUTTON                                  */
-    /* ================================================= */
-
     completedButton: {
       backgroundColor:
         lightTheme.colors.surface,
 
-      borderWidth: 1,
+      borderWidth:
+        1,
 
       borderColor:
         lightTheme.colors.primary,
 
-      elevation: 0,
+      elevation:
+        0,
     },
+
 
     completedButtonText: {
       color:
@@ -1020,12 +1071,9 @@ const styles =
     },
 
 
-    /* ================================================= */
-    /* SECONDARY BUTTON                                  */
-    /* ================================================= */
-
     secondaryButton: {
-      height: 54,
+      minHeight:
+        54,
 
       borderRadius:
         lightTheme.radius.md,
@@ -1033,7 +1081,8 @@ const styles =
       backgroundColor:
         lightTheme.colors.surface,
 
-      borderWidth: 1,
+      borderWidth:
+        1,
 
       borderColor:
         lightTheme.colors.border,
@@ -1045,6 +1094,7 @@ const styles =
         'center',
     },
 
+
     secondaryButtonText: {
       ...typography.button,
 
@@ -1053,12 +1103,12 @@ const styles =
     },
 
 
-    /* ================================================= */
-    /* DELETE                                             */
-    /* ================================================= */
-
     deleteButton: {
-      height: 46,
+      minHeight:
+        46,
+
+      flexDirection:
+        'row',
 
       alignItems:
         'center',
@@ -1066,9 +1116,13 @@ const styles =
       justifyContent:
         'center',
 
+      gap:
+        spacing.sm,
+
       marginTop:
         spacing.xs,
     },
+
 
     deleteText: {
       ...typography.bodyMedium,
@@ -1076,26 +1130,27 @@ const styles =
       color:
         lightTheme.colors.danger,
 
-      fontWeight: '600',
+      fontWeight:
+        '600',
     },
 
 
-    /* ================================================= */
-    /* PRESSED STATES                                    */
-    /* ================================================= */
-
     buttonPressed: {
-      opacity: 0.82,
+      opacity:
+        0.82,
 
       transform: [
         {
-          scale: 0.99,
+          scale:
+            0.99,
         },
       ],
     },
 
+
     deletePressed: {
-      opacity: 0.65,
+      opacity:
+        0.65,
     },
 
   });

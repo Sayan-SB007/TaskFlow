@@ -1,6 +1,7 @@
 import React, {
   useCallback,
   useEffect,
+  useMemo,
   useState,
 } from 'react';
 
@@ -20,6 +21,9 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 
+import FontAwesome6 from
+  '@react-native-vector-icons/fontawesome6/static';
+
 import {
   useAppDispatch,
 } from '../../../hooks/useAppDispatch';
@@ -34,7 +38,6 @@ import {
   selectRemainingCount,
   selectTaskCount,
   selectTaskFilter,
-  selectVisibleTasks,
 } from '../taskSelectors';
 
 import {
@@ -81,13 +84,13 @@ import {
   shadows,
 } from '../../../theme/shadows';
 
-
+import {
+  debugTasks,
+} from '../../../database/debug';
 
 import {
   firebaseAuth,
 } from '../../../config/firebase';
-import { debugTasks } from '../../../database/debug';
-import { clearPendingTaskNotification, subscribeToForegroundNotifications, getInitialTaskNotification, getPendingTaskNotification } from '../../notifications/notificationHandlers';
 
 
 /* ================================================= */
@@ -98,19 +101,19 @@ const FILTERS: {
   label: string;
   value: TaskFilter;
 }[] = [
-    {
-      label: 'All',
-      value: 'all',
-    },
-    {
-      label: 'Today',
-      value: 'today',
-    },
-    {
-      label: 'Upcoming',
-      value: 'upcoming',
-    },
-  ];
+  {
+    label: 'All',
+    value: 'all',
+  },
+  {
+    label: 'Today',
+    value: 'today',
+  },
+  {
+    label: 'Upcoming',
+    value: 'upcoming',
+  },
+];
 
 
 /* ================================================= */
@@ -137,70 +140,278 @@ const getGreeting = (): string => {
 
 
 /* ================================================= */
+/* DATE HELPERS                                      */
+/* ================================================= */
+
+function parseTaskDate(
+  value?: string,
+): Date | null {
+
+  if (!value) {
+    return null;
+  }
+
+  /*
+   * Existing task format:
+   *
+   * Today
+   */
+  if (
+    value.trim().toLowerCase() ===
+    'today'
+  ) {
+    const today = new Date();
+
+    return new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+    );
+  }
+
+
+  /*
+   * ISO / normal Date-compatible values.
+   */
+  const nativeDate =
+    new Date(value);
+
+  if (
+    !Number.isNaN(
+      nativeDate.getTime(),
+    )
+  ) {
+    return new Date(
+      nativeDate.getFullYear(),
+      nativeDate.getMonth(),
+      nativeDate.getDate(),
+    );
+  }
+
+
+  /*
+   * Existing UI format:
+   *
+   * 17 Aug 2026
+   */
+  const parts =
+    value.trim().split(/\s+/);
+
+  if (
+    parts.length !== 3
+  ) {
+    return null;
+  }
+
+  const day =
+    Number(parts[0]);
+
+  const month =
+    parts[1];
+
+  const year =
+    Number(parts[2]);
+
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+
+  const monthIndex =
+    months.findIndex(
+      item =>
+        item.toLowerCase() ===
+        month.toLowerCase(),
+    );
+
+  if (
+    !Number.isFinite(day) ||
+    monthIndex < 0 ||
+    !Number.isFinite(year)
+  ) {
+    return null;
+  }
+
+  return new Date(
+    year,
+    monthIndex,
+    day,
+  );
+}
+
+
+/* ================================================= */
+/* DATE NORMALIZATION                                */
+/* ================================================= */
+
+function startOfDay(
+  date: Date,
+): Date {
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+  );
+}
+
+
+function isSameDay(
+  first: Date,
+  second: Date,
+): boolean {
+
+  return (
+    first.getFullYear() ===
+      second.getFullYear() &&
+
+    first.getMonth() ===
+      second.getMonth() &&
+
+    first.getDate() ===
+      second.getDate()
+  );
+}
+
+
+function isToday(
+  value?: string,
+): boolean {
+
+  const date =
+    parseTaskDate(value);
+
+  if (!date) {
+    return false;
+  }
+
+  return isSameDay(
+    date,
+    new Date(),
+  );
+}
+
+
+/* ================================================= */
 /* SCREEN                                             */
 /* ================================================= */
 
 export function TasksScreen() {
-  const dispatch = useAppDispatch();
 
-  const insets = useSafeAreaInsets();
+  const dispatch =
+    useAppDispatch();
 
-
-  /* ================================================= */
-  /* UI STATE                                           */
-  /* ================================================= */
-
-  const [formVisible, setFormVisible] =
-    useState(false);
-
-  const [detailsVisible, setDetailsVisible] =
-    useState(false);
-
-  const [selectedTask, setSelectedTask] =
-    useState<Task | null>(null);
-
-  const [deleteVisible, setDeleteVisible] =
-    useState(false);
-
-  const [taskToDelete, setTaskToDelete] =
-    useState<Task | null>(null);
+  const insets =
+    useSafeAreaInsets();
 
 
   /* ================================================= */
-  /* REDUX STATE                                        */
+  /* UI STATE                                          */
   /* ================================================= */
 
-  const tasks = useAppSelector(
-    selectVisibleTasks,
+  const [
+    formVisible,
+    setFormVisible,
+  ] = useState(false);
+
+  const [
+    detailsVisible,
+    setDetailsVisible,
+  ] = useState(false);
+
+  /*
+   * IMPORTANT:
+   *
+   * Store only the ID.
+   *
+   * Never store the entire Task object here.
+   * This prevents stale details after Redux updates.
+   */
+  const [
+    selectedTaskId,
+    setSelectedTaskId,
+  ] = useState<string | null>(
+    null,
   );
 
-  const filter = useAppSelector(
-    selectTaskFilter,
+  const [
+    deleteVisible,
+    setDeleteVisible,
+  ] = useState(false);
+
+  const [
+    taskToDeleteId,
+    setTaskToDeleteId,
+  ] = useState<string | null>(
+    null,
   );
 
-  const total = useAppSelector(
-    selectTaskCount,
-  );
+  const [
+    notificationsVisible,
+    setNotificationsVisible,
+  ] = useState(false);
 
-  const completed = useAppSelector(
-    selectCompletedCount,
-  );
 
-  const remaining = useAppSelector(
-    selectRemainingCount,
-  );
+  /* ================================================= */
+  /* REDUX STATE                                       */
+  /* ================================================= */
 
-  const progress = useAppSelector(
-    selectProgress,
-  );
+  /*
+   * Read the actual task collection directly from
+   * Redux instead of relying on the old date filter.
+   *
+   * taskSlice uses `items: Task[]`.
+   */
+  const allTasks =
+    useAppSelector(
+      state => state.tasks.items,
+    );
 
-  const taskStatus = useAppSelector(
-    state => state.tasks.status,
-  );
+  const filter =
+    useAppSelector(
+      selectTaskFilter,
+    );
 
-  const taskOperation = useAppSelector(
-    state => state.tasks.operation,
-  );
+  const total =
+    useAppSelector(
+      selectTaskCount,
+    );
+
+  const completed =
+    useAppSelector(
+      selectCompletedCount,
+    );
+
+  const remaining =
+    useAppSelector(
+      selectRemainingCount,
+    );
+
+  const progress =
+    useAppSelector(
+      selectProgress,
+    );
+
+  const taskStatus =
+    useAppSelector(
+      state =>
+        state.tasks.status,
+    );
+
+  const taskOperation =
+    useAppSelector(
+      state =>
+        state.tasks.operation,
+    );
 
 
   /* ================================================= */
@@ -211,7 +422,9 @@ export function TasksScreen() {
     firebaseAuth.currentUser;
 
   const userName =
-    currentUser?.displayName?.trim() ||
+    currentUser
+      ?.displayName
+      ?.trim() ||
     'there';
 
   const greeting =
@@ -223,127 +436,16 @@ export function TasksScreen() {
   /* ================================================= */
 
   useEffect(() => {
-    dispatch(loadTasks());
+
+    dispatch(
+      loadTasks(),
+    );
 
     debugTasks();
+
   }, [dispatch]);
 
-/* ================================================= */
-/* NOTIFICATION → TASK DETAILS                       */
-/* ================================================= */
 
-useEffect(() => {
-
-  let mounted = true;
-
-
-  const openTaskFromNotification = (
-    taskId: string,
-  ) => {
-
-    if (!mounted) {
-      return;
-    }
-
-
-    /*
-     * Find the task from the current Redux list.
-     */
-    const task =
-      tasks.find(
-        item =>
-          item.id === taskId,
-      );
-
-
-    if (!task) {
-
-      console.warn(
-        'NOTIFICATION: Task not found',
-        {
-          taskId,
-        },
-      );
-
-      return;
-    }
-
-
-    console.log(
-      'NOTIFICATION: Opening task details',
-      {
-        taskId,
-      },
-    );
-
-
-    setSelectedTask(task);
-
-    setDetailsVisible(true);
-
-    void clearPendingTaskNotification();
-  };
-
-
-  /*
-   * App is currently open.
-   *
-   * Notification tap is delivered through
-   * the foreground event listener.
-   */
-  const unsubscribe =
-    subscribeToForegroundNotifications(
-      openTaskFromNotification,
-    );
-
-
-  /*
-   * App was completely killed and launched
-   * by tapping the notification.
-   */
-  void getInitialTaskNotification()
-    .then(taskId => {
-
-      if (
-        taskId &&
-        mounted
-      ) {
-
-        openTaskFromNotification(
-          taskId,
-        );
-      }
-    });
-
-
-  /*
-   * App was running in background and the
-   * background handler stored the task ID.
-   */
-  void getPendingTaskNotification()
-    .then(taskId => {
-
-      if (
-        taskId &&
-        mounted
-      ) {
-
-        openTaskFromNotification(
-          taskId,
-        );
-      }
-    });
-
-
-  return () => {
-
-    mounted = false;
-
-    unsubscribe();
-
-  };
-
-}, [tasks]);
   /* ================================================= */
   /* LOADING MESSAGE                                   */
   /* ================================================= */
@@ -361,173 +463,234 @@ useEffect(() => {
 
 
   /* ================================================= */
-  /* TASK TOGGLE                                       */
+  /* FIXED TASK FILTERING                              */
   /* ================================================= */
 
-  const handleToggle = useCallback(
-    (task: Task) => {
-      if (taskStatus === 'loading') {
-        return;
+  /*
+   * IMPORTANT:
+   *
+   * We intentionally do the filtering here.
+   *
+   * The old selector can fail for values such as:
+   *
+   * 17 Aug 2026
+   *
+   * because the stored dueDate is a formatted string.
+   *
+   * This makes the Today tab correctly include
+   * every task whose due date is today's local date.
+   */
+
+  const visibleTasks =
+    useMemo(() => {
+
+      const today =
+        startOfDay(
+          new Date(),
+        );
+
+      if (
+        filter === 'all'
+      ) {
+        return allTasks;
       }
 
-      dispatch(
-        toggleTask(task.id),
-      );
-    },
-    [
-      dispatch,
-      taskStatus,
-    ],
-  );
+      if (
+        filter === 'today'
+      ) {
 
+        return allTasks.filter(
+          task => {
 
-  /* ================================================= */
-  /* TASK PRESS                                        */
-  /* ================================================= */
+            const taskDate =
+              parseTaskDate(
+                task.dueDate,
+              );
 
-  const handleTaskPress = useCallback(
-    (task: Task) => {
-      if (taskStatus === 'loading') {
-        return;
-      }
-
-      setSelectedTask(task);
-
-      setDetailsVisible(true);
-    },
-    [taskStatus],
-  );
-
-
-  /* ================================================= */
-  /* FILTER                                            */
-  /* ================================================= */
-
-  const handleFilter = useCallback(
-    (value: TaskFilter) => {
-      if (taskStatus === 'loading') {
-        return;
-      }
-
-      dispatch(
-        setFilter(value),
-      );
-    },
-    [
-      dispatch,
-      taskStatus,
-    ],
-  );
-
-
-  /* ================================================= */
-  /* CREATE                                             */
-  /* ================================================= */
-
-  const handleCreateTask = useCallback(() => {
-    if (taskStatus === 'loading') {
-      return;
-    }
-
-    setSelectedTask(null);
-
-    setFormVisible(true);
-  }, [taskStatus]);
-
-
-  /* ================================================= */
-  /* CLOSE FORM                                        */
-  /* ================================================= */
-
-  const handleCloseForm = useCallback(() => {
-    if (taskStatus === 'loading') {
-      return;
-    }
-
-    setFormVisible(false);
-
-    setSelectedTask(null);
-  }, [taskStatus]);
-
-
-  /* ================================================= */
-  /* CLOSE DETAILS                                     */
-  /* ================================================= */
-
-  const handleCloseDetails =
-    useCallback(() => {
-      if (taskStatus === 'loading') {
-        return;
-      }
-
-      setDetailsVisible(false);
-
-      setSelectedTask(null);
-    }, [taskStatus]);
-
-
-  /* ================================================= */
-  /* COMPLETE FROM DETAILS                             */
-  /* ================================================= */
-
-  const handleToggleFromDetails =
-    useCallback(
-      (task: Task) => {
-
-        if (taskStatus === 'loading') {
-          return;
-        }
-
-
-        /*
-         * IMPORTANT:
-         *
-         * selectedTask is independent from Redux.
-         *
-         * Redux updates the task list, but the
-         * details sheet was still holding the
-         * previous task object.
-         *
-         * Update selectedTask immediately so
-         * the details sheet reflects the new
-         * status without closing/reopening it.
-         */
-        setSelectedTask(
-          previousTask => {
-
-            if (
-              !previousTask ||
-              previousTask.id !== task.id
-            ) {
-              return previousTask;
+            if (!taskDate) {
+              return false;
             }
 
+            return isSameDay(
+              taskDate,
+              today,
+            );
+          },
+        );
+      }
 
-            return {
-              ...previousTask,
+      if (
+        filter === 'upcoming'
+      ) {
 
-              status:
-                previousTask.status ===
-                  'completed'
-                  ? 'pending'
-                  : 'completed',
-            };
+        return allTasks.filter(
+          task => {
+
+            const taskDate =
+              parseTaskDate(
+                task.dueDate,
+              );
+
+            if (!taskDate) {
+              return false;
+            }
+
+            return (
+              startOfDay(
+                taskDate,
+              ).getTime() >
+              today.getTime()
+            );
+          },
+        );
+      }
+
+      return allTasks;
+
+    }, [
+      allTasks,
+      filter,
+    ]);
+
+
+  /* ================================================= */
+  /* SELECTED TASK                                    */
+  /* ================================================= */
+
+  /*
+   * This is the critical fix.
+   *
+   * Whenever Redux changes the task,
+   * selectedTask automatically becomes
+   * the latest version.
+   */
+  const selectedTask =
+    useMemo(() => {
+
+      if (!selectedTaskId) {
+        return null;
+      }
+
+      return (
+        allTasks.find(
+          task =>
+            task.id ===
+            selectedTaskId,
+        ) ?? null
+      );
+
+    }, [
+      allTasks,
+      selectedTaskId,
+    ]);
+
+
+  /* ================================================= */
+  /* DELETE TASK                                      */
+  /* ================================================= */
+
+  const taskToDelete =
+    useMemo(() => {
+
+      if (!taskToDeleteId) {
+        return null;
+      }
+
+      return (
+        allTasks.find(
+          task =>
+            task.id ===
+            taskToDeleteId,
+        ) ?? null
+      );
+
+    }, [
+      allTasks,
+      taskToDeleteId,
+    ]);
+
+
+  /* ================================================= */
+  /* TODAY NOTIFICATIONS                              */
+  /* ================================================= */
+
+  /*
+   * Simple local notification list.
+   *
+   * Incomplete tasks with today's date and
+   * a due time are shown here.
+   */
+
+  const todayNotifications =
+    useMemo(() => {
+
+      return allTasks
+        .filter(task => {
+
+          if (
+            task.status ===
+            'completed'
+          ) {
+            return false;
+          }
+
+          if (
+            !task.dueDate ||
+            !task.dueTime
+          ) {
+            return false;
+          }
+
+          return isToday(
+            task.dueDate,
+          );
+        })
+        .sort(
+          (
+            first,
+            second,
+          ) => {
+
+            return (
+              (
+                first.dueTime ??
+                ''
+              ).localeCompare(
+                second.dueTime ??
+                '',
+              )
+            );
           },
         );
 
+    }, [
+      allTasks,
+    ]);
 
-        /*
-         * Keep the existing Redux flow.
-         *
-         * This is still responsible for:
-         *
-         * - Redux state
-         * - SQLite update
-         * - offline queue
-         * - Firebase sync
-         */
+
+  const notificationCount =
+    todayNotifications.length;
+
+
+  /* ================================================= */
+  /* TASK TOGGLE                                      */
+  /* ================================================= */
+
+  const handleToggle =
+    useCallback(
+      (task: Task) => {
+
+        if (
+          taskStatus ===
+          'loading'
+        ) {
+          return;
+        }
+
         dispatch(
-          toggleTask(task.id),
+          toggleTask(
+            task.id,
+          ),
         );
       },
       [
@@ -536,174 +699,524 @@ useEffect(() => {
       ],
     );
 
+
   /* ================================================= */
-  /* EDIT                                              */
+  /* TASK PRESS                                       */
+  /* ================================================= */
+
+  const handleTaskPress =
+    useCallback(
+      (task: Task) => {
+
+        if (
+          taskStatus ===
+          'loading'
+        ) {
+          return;
+        }
+
+        setSelectedTaskId(
+          task.id,
+        );
+
+        setDetailsVisible(
+          true,
+        );
+      },
+      [
+        taskStatus,
+      ],
+    );
+
+
+  /* ================================================= */
+  /* FILTER                                           */
+  /* ================================================= */
+
+  const handleFilter =
+    useCallback(
+      (value: TaskFilter) => {
+
+        if (
+          taskStatus ===
+          'loading'
+        ) {
+          return;
+        }
+
+        dispatch(
+          setFilter(value),
+        );
+      },
+      [
+        dispatch,
+        taskStatus,
+      ],
+    );
+
+
+  /* ================================================= */
+  /* CREATE TASK                                      */
+  /* ================================================= */
+
+  const handleCreateTask =
+    useCallback(() => {
+
+      if (
+        taskStatus ===
+        'loading'
+      ) {
+        return;
+      }
+
+      setSelectedTaskId(
+        null,
+      );
+
+      setFormVisible(
+        true,
+      );
+
+    }, [
+      taskStatus,
+    ]);
+
+
+  /* ================================================= */
+  /* CLOSE FORM                                       */
+  /* ================================================= */
+
+  const handleCloseForm =
+    useCallback(() => {
+
+      setFormVisible(
+        false,
+      );
+
+      /*
+       * Only clear the selected ID when
+       * we are using the form.
+       */
+      setSelectedTaskId(
+        null,
+      );
+
+    }, []);
+
+
+  /* ================================================= */
+  /* CLOSE DETAILS                                    */
+  /* ================================================= */
+
+  const handleCloseDetails =
+    useCallback(() => {
+
+      setDetailsVisible(
+        false,
+      );
+
+      setSelectedTaskId(
+        null,
+      );
+
+    }, []);
+
+
+  /* ================================================= */
+  /* TOGGLE FROM DETAILS                              */
+  /* ================================================= */
+
+  const handleToggleFromDetails =
+    useCallback(
+      (task: Task) => {
+
+        if (
+          taskStatus ===
+          'loading'
+        ) {
+          return;
+        }
+
+        /*
+         * Do NOT modify selectedTask locally.
+         *
+         * Redux changes first.
+         *
+         * selectedTask is then resolved again
+         * from allTasks above.
+         */
+        dispatch(
+          toggleTask(
+            task.id,
+          ),
+        );
+
+      },
+      [
+        dispatch,
+        taskStatus,
+      ],
+    );
+
+
+  /* ================================================= */
+  /* EDIT TASK                                        */
   /* ================================================= */
 
   const handleEditTask =
     useCallback(
       (task: Task) => {
-        if (taskStatus === 'loading') {
+
+        if (
+          taskStatus ===
+          'loading'
+        ) {
           return;
         }
 
-        setDetailsVisible(false);
+        setDetailsVisible(
+          false,
+        );
 
-        setSelectedTask(task);
+        setSelectedTaskId(
+          task.id,
+        );
 
-        setFormVisible(true);
+        setFormVisible(
+          true,
+        );
+
       },
-      [taskStatus],
+      [
+        taskStatus,
+      ],
     );
 
 
   /* ================================================= */
-  /* DELETE REQUEST                                    */
+  /* DELETE REQUEST                                   */
   /* ================================================= */
 
   const handleDeleteRequest =
     useCallback(
       (task: Task) => {
-        if (taskStatus === 'loading') {
+
+        if (
+          taskStatus ===
+          'loading'
+        ) {
           return;
         }
 
-        setDetailsVisible(false);
+        setDetailsVisible(
+          false,
+        );
 
-        setTaskToDelete(task);
+        setTaskToDeleteId(
+          task.id,
+        );
 
-        setDeleteVisible(true);
+        setDeleteVisible(
+          true,
+        );
       },
-      [taskStatus],
+      [
+        taskStatus,
+      ],
     );
 
 
   /* ================================================= */
-  /* DELETE CONFIRM                                    */
+  /* CONFIRM DELETE                                   */
   /* ================================================= */
 
   const handleConfirmDelete =
-    useCallback(() => {
-      if (
-        !taskToDelete ||
-        taskStatus === 'loading'
-      ) {
-        return;
-      }
+    useCallback(
+      () => {
 
-      dispatch(
-        deleteTask(
-          taskToDelete.id,
-        ),
-      );
+        if (
+          !taskToDeleteId
+        ) {
+          return;
+        }
 
-      setDeleteVisible(false);
+        dispatch(
+          deleteTask(
+            taskToDeleteId,
+          ),
+        );
 
-      setTaskToDelete(null);
+        setDeleteVisible(
+          false,
+        );
 
-      setSelectedTask(null);
-    }, [
-      dispatch,
-      taskStatus,
-      taskToDelete,
-    ]);
+        setTaskToDeleteId(
+          null,
+        );
+
+        setSelectedTaskId(
+          null,
+        );
+
+        setDetailsVisible(
+          false,
+        );
+
+      },
+      [
+        dispatch,
+        taskToDeleteId,
+      ],
+    );
 
 
   /* ================================================= */
-  /* DELETE CANCEL                                     */
+  /* CANCEL DELETE                                    */
   /* ================================================= */
 
   const handleCancelDelete =
     useCallback(() => {
-      if (taskStatus === 'loading') {
+
+      setDeleteVisible(
+        false,
+      );
+
+      setTaskToDeleteId(
+        null,
+      );
+
+    }, []);
+
+
+  /* ================================================= */
+  /* NOTIFICATIONS                                    */
+  /* ================================================= */
+
+  const handleOpenNotifications =
+    useCallback(() => {
+
+      if (
+        taskStatus ===
+        'loading'
+      ) {
         return;
       }
 
-      setDeleteVisible(false);
-
-      setTaskToDelete(null);
-    }, [taskStatus]);
-
-
-  /* ================================================= */
-  /* FLATLIST ITEM                                      */
-  /* ================================================= */
-
-  const renderTask = useCallback(
-    ({
-      item,
-    }: {
-      item: Task;
-    }) => {
-      return (
-        <TaskCard
-          task={item}
-          onToggle={handleToggle}
-          onPress={handleTaskPress}
-        />
+      setNotificationsVisible(
+        true,
       );
-    },
-    [
-      handleToggle,
-      handleTaskPress,
-    ],
-  );
+
+    }, [
+      taskStatus,
+    ]);
+
+
+  const handleCloseNotifications =
+    useCallback(() => {
+
+      setNotificationsVisible(
+        false,
+      );
+
+    }, []);
+
+
+  const handleNotificationPress =
+    useCallback(
+      (task: Task) => {
+
+        setNotificationsVisible(
+          false,
+        );
+
+        setSelectedTaskId(
+          task.id,
+        );
+
+        setDetailsVisible(
+          true,
+        );
+
+      },
+      [],
+    );
+
+
+  /* ================================================= */
+  /* RENDER TASK                                      */
+  /* ================================================= */
+
+  const renderTask =
+    useCallback(
+      ({
+        item,
+      }: {
+        item: Task;
+      }) => {
+
+        return (
+          <TaskCard
+            task={item}
+            onPress={
+              handleTaskPress
+            }
+            onToggle={
+              handleToggle
+            }
+          />
+        );
+
+      },
+      [
+        handleTaskPress,
+        handleToggle,
+      ],
+    );
+
+
+  /* ================================================= */
+  /* KEY EXTRACTOR                                    */
+  /* ================================================= */
+
+  const keyExtractor =
+    useCallback(
+      (item: Task) =>
+        item.id,
+      [],
+    );
+
+
+  /* ================================================= */
+  /* EMPTY STATE                                      */
+  /* ================================================= */
+
+  const emptyComponent =
+    useMemo(() => {
+
+      return (
+        <View
+          style={
+            styles.empty
+          }
+        >
+
+          <View
+            style={
+              styles.emptyIconContainer
+            }
+          >
+
+            <Text
+              style={
+                styles.emptyIcon
+              }
+            >
+              ✓
+            </Text>
+
+          </View>
+
+
+          <Text
+            style={
+              styles.emptyTitle
+            }
+          >
+            No tasks here
+          </Text>
+
+
+          <Text
+            style={
+              styles.emptyText
+            }
+          >
+            You're all caught up.
+            {'\n'}
+            Enjoy the moment.
+          </Text>
+
+
+          <Pressable
+            onPress={
+              handleCreateTask
+            }
+            disabled={
+              taskStatus ===
+              'loading'
+            }
+            style={({pressed}) => [
+              styles.emptyButton,
+
+              pressed &&
+                styles.buttonPressed,
+
+              taskStatus ===
+                'loading' &&
+                styles.disabledButton,
+            ]}
+          >
+
+            <Text
+              style={
+                styles.emptyButtonText
+              }
+            >
+              Create a task
+            </Text>
+
+          </Pressable>
+
+        </View>
+      );
+
+    }, [
+      handleCreateTask,
+      taskStatus,
+    ]);
 
 
   /* ================================================= */
   /* FAB POSITION                                      */
   /* ================================================= */
 
-  /*
-   * Keep the FAB above the Android
-   * system navigation area.
-   *
-   * We intentionally do NOT use
-   * useBottomTabBarHeight() here because
-   * the current screen layout should keep
-   * the FAB independent from the tab bar.
-   */
-
   const fabBottom =
     Math.max(
       insets.bottom,
-      Platform.OS === 'android'
-        ? 12
-        : 8,
-    ) + 18;
+      12,
+    ) + 72;
 
 
-  /*
-   * Give the FlatList enough bottom room
-   * so the last task can always be scrolled
-   * above the FAB.
-   */
-
-  const listBottomPadding =
-    Math.max(
-      insets.bottom,
-      Platform.OS === 'android'
-        ? 12
-        : 8,
-    ) + 110;
-
-
-
-  // RENDER
+  /* ================================================= */
+  /* RENDER                                            */
+  /* ================================================= */
 
   return (
-    <View style={styles.safeArea}>
+    <View
+      style={
+        styles.safeArea
+      }
+    >
 
       <StatusBar
         barStyle="dark-content"
+        backgroundColor={
+          lightTheme.colors.background
+        }
       />
 
 
+      {/* ================================================= */}
+      {/* LIST                                               */}
+      {/* ================================================= */}
+
       <FlatList
-        data={tasks}
+        data={
+          visibleTasks
+        }
 
         keyExtractor={
-          item => item.id
+          keyExtractor
         }
 
         renderItem={
@@ -716,125 +1229,176 @@ useEffect(() => {
 
         contentContainerStyle={[
           styles.content,
-          {
-            paddingBottom:
-              listBottomPadding,
-          },
+
+          visibleTasks.length ===
+            0 &&
+            styles.emptyListContent,
         ]}
-
-        initialNumToRender={8}
-
-        maxToRenderPerBatch={8}
-
-        windowSize={7}
-
-        removeClippedSubviews
-
-
-        /* ================================================= */
-        /* HEADER                                             */
-        /* ================================================= */
 
         ListHeaderComponent={
           <>
+            {/* ================================================= */}
+            {/* HEADER                                             */}
+            {/* ================================================= */}
+
             <View
               style={
                 styles.header
-              }>
+              }
+            >
 
               <View
                 style={
                   styles.greetingContainer
-                }>
+                }
+              >
 
                 <Text
                   style={
                     styles.greeting
-                  }>
+                  }
+                >
                   {greeting} 👋
                 </Text>
 
                 <Text
                   style={
                     styles.name
-                  }>
+                  }
+                >
                   {userName}
                 </Text>
 
               </View>
 
 
-              {/* Notification */}
+              {/* ================================================= */}
+              {/* NOTIFICATION BUTTON                               */}
+              {/* ================================================= */}
 
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Notifications"
+                accessibilityLabel={
+                  notificationCount > 0
+                    ? `${notificationCount} notifications`
+                    : 'Notifications'
+                }
                 disabled={
                   taskStatus ===
                   'loading'
                 }
-                style={
-                  styles.notificationButton
-                }>
+                onPress={
+                  handleOpenNotifications
+                }
+                style={({pressed}) => [
+                  styles.notificationButton,
 
-                <Text
-                  style={
-                    styles.notificationIcon
-                  }>
-                  🔔
-                </Text>
+                  pressed &&
+                    styles.buttonPressed,
 
-                <View
-                  style={
-                    styles.notificationDot
+                  taskStatus ===
+                    'loading' &&
+                    styles.disabledButton,
+                ]}
+              >
+
+                <FontAwesome6
+                  name="bell"
+                  size={18}
+                  color={
+                    lightTheme.colors.primary
                   }
+                  iconStyle="solid"
                 />
+
+
+                {notificationCount >
+                0 ? (
+
+                  <View
+                    style={
+                      styles.notificationBadge
+                    }
+                  >
+
+                    <Text
+                      style={
+                        styles.notificationBadgeText
+                      }
+                    >
+                      {
+                        notificationCount >
+                        9
+                          ? '9+'
+                          : notificationCount
+                      }
+                    </Text>
+
+                  </View>
+
+                ) : null}
 
               </Pressable>
 
             </View>
 
 
-
-            {/* PRODUCTIVITY   */}
-
+            {/* ================================================= */}
+            {/* PRODUCTIVITY                                      */}
+            {/* ================================================= */}
 
             <ProductivityCard
-              total={total}
-              completed={completed}
-              remaining={remaining}
-              progress={progress}
+              total={
+                total
+              }
+              completed={
+                completed
+              }
+              remaining={
+                remaining
+              }
+              progress={
+                progress
+              }
             />
 
 
-            {/* TASK HEADER    */}
-
+            {/* ================================================= */}
+            {/* TASK SECTION                                      */}
+            {/* ================================================= */}
 
             <View
               style={
                 styles.sectionHeader
-              }>
+              }
+            >
 
               <Text
                 style={
                   styles.sectionTitle
-                }>
+                }
+              >
                 My Tasks
               </Text>
 
 
               <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="See all tasks"
+                onPress={() =>
+                  handleFilter(
+                    'all',
+                  )
+                }
                 disabled={
                   taskStatus ===
                   'loading'
-                }>
+                }
+              >
 
                 <Text
                   style={
                     styles.seeAll
-                  }>
+                  }
+                >
                   See all
                 </Text>
 
@@ -843,13 +1407,15 @@ useEffect(() => {
             </View>
 
 
-            {/* FILTERS  */}
-
+            {/* ================================================= */}
+            {/* FILTERS                                            */}
+            {/* ================================================= */}
 
             <View
               style={
                 styles.filters
-              }>
+              }
+            >
 
               {FILTERS.map(
                 item => {
@@ -863,46 +1429,38 @@ useEffect(() => {
                       key={
                         item.value
                       }
-
-                      accessibilityRole="button"
-
-                      accessibilityState={{
-                        selected:
-                          active,
-                      }}
-
-                      disabled={
-                        taskStatus ===
-                        'loading'
-                      }
-
                       onPress={() =>
                         handleFilter(
                           item.value,
                         )
                       }
-
+                      disabled={
+                        taskStatus ===
+                        'loading'
+                      }
                       style={[
                         styles.filter,
 
                         active &&
-                        styles.filterActive,
+                          styles.filterActive,
 
                         taskStatus ===
-                        'loading' &&
-                        styles.disabledButton,
-                      ]}>
+                          'loading' &&
+                          styles.disabledButton,
+                      ]}
+                    >
 
                       <Text
                         style={[
                           styles.filterText,
 
                           active &&
-                          styles.filterTextActive,
-                        ]}>
-
-                        {item.label}
-
+                            styles.filterTextActive,
+                        ]}
+                      >
+                        {
+                          item.label
+                        }
                       </Text>
 
                     </Pressable>
@@ -915,130 +1473,76 @@ useEffect(() => {
           </>
         }
 
-
-        /* ================================================= */
-        /* EMPTY STATE                                        */
-        /* ================================================= */
-
         ListEmptyComponent={
-          <View
-            style={
-              styles.empty
-            }>
+          emptyComponent
+        }
 
+        ItemSeparatorComponent={
+          () => (
             <View
               style={
-                styles.emptyIconContainer
-              }>
-
-              <Text
-                style={
-                  styles.emptyIcon
-                }>
-                ✓
-              </Text>
-
-            </View>
-
-
-            <Text
-              style={
-                styles.emptyTitle
-              }>
-              No tasks here
-            </Text>
-
-
-            <Text
-              style={
-                styles.emptyText
-              }>
-              You're all caught up.
-              {'\n'}
-              Enjoy the moment.
-            </Text>
-
-
-            <Pressable
-              onPress={
-                handleCreateTask
+                styles.taskSeparator
               }
+            />
+          )
+        }
 
-              disabled={
-                taskStatus ===
-                'loading'
-              }
+        initialNumToRender={8}
 
-              style={[
-                styles.emptyButton,
+        maxToRenderPerBatch={8}
 
-                taskStatus ===
-                'loading' &&
-                styles.disabledButton,
-              ]}>
+        windowSize={7}
 
-              <Text
-                style={
-                  styles.emptyButtonText
-                }>
-                Create a task
-              </Text>
-
-            </Pressable>
-
-          </View>
+        removeClippedSubviews={
+          Platform.OS ===
+          'android'
         }
       />
 
 
       {/* ================================================= */}
-      {/* FLOATING ACTION BUTTON                             */}
+      {/* FAB                                                  */}
       {/* ================================================= */}
 
       <Pressable
         accessibilityRole="button"
-
         accessibilityLabel="Create new task"
-
         onPress={
           handleCreateTask
         }
-
         disabled={
           taskStatus ===
           'loading'
         }
+        style={({pressed}) => [
+          styles.fab,
 
-        style={({
-          pressed,
-        }) => [
-            styles.fab,
+          {
+            bottom:
+              fabBottom,
+          },
 
-            {
-              bottom:
-                fabBottom,
-            },
-
-            pressed &&
+          pressed &&
             styles.fabPressed,
 
-            taskStatus ===
+          taskStatus ===
             'loading' &&
             styles.disabledButton,
-          ]}>
+        ]}
+      >
 
-        <Text
-          style={
-            styles.fabText
-          }>
-          +
-        </Text>
+        <FontAwesome6
+          name="plus"
+          size={20}
+          color="#FFFFFF"
+          iconStyle="solid"
+        />
 
       </Pressable>
 
 
       {/* ================================================= */}
-      {/* CREATE / EDIT TASK                                */}
+      {/* CREATE / EDIT                                     */}
       {/* ================================================= */}
 
       <TaskFormSheet
@@ -1056,19 +1560,40 @@ useEffect(() => {
       />
 
 
-
+      {/* ================================================= */}
+      {/* DETAILS                                           */}
+      {/* ================================================= */}
 
       <TaskDetailsSheet
-        visible={detailsVisible}
-        task={selectedTask}
-        onClose={handleCloseDetails}
-        onToggle={handleToggleFromDetails}
-        onEdit={handleEditTask}
-        onDelete={handleDeleteRequest}
+        visible={
+          detailsVisible
+        }
+
+        task={
+          selectedTask
+        }
+
+        onClose={
+          handleCloseDetails
+        }
+
+        onToggle={
+          handleToggleFromDetails
+        }
+
+        onEdit={
+          handleEditTask
+        }
+
+        onDelete={
+          handleDeleteRequest
+        }
       />
 
 
-
+      {/* ================================================= */}
+      {/* DELETE CONFIRMATION                               */}
+      {/* ================================================= */}
 
       <DeleteConfirmation
         visible={
@@ -1088,57 +1613,88 @@ useEffect(() => {
         }
       />
 
-      {/* DATABASE / TASK OPERATION LOADING                 */}
+
+      {/* ================================================= */}
+      {/* NOTIFICATIONS                                     */}
+      {/* ================================================= */}
+
+      <NotificationsSheet
+        visible={
+          notificationsVisible
+        }
+
+        notifications={
+          todayNotifications
+        }
+
+        onClose={
+          handleCloseNotifications
+        }
+
+        onPress={
+          handleNotificationPress
+        }
+      />
+
+
+      {/* ================================================= */}
+      {/* DATABASE LOADING                                  */}
+      {/* ================================================= */}
 
       {taskStatus ===
         'loading' && (
-          <Modal
-            visible
-            transparent
-            animationType="fade"
-            statusBarTranslucent
-            onRequestClose={() => { }}>
+
+        <Modal
+          visible
+          transparent
+          animationType="fade"
+          statusBarTranslucent
+          onRequestClose={() => {}}
+        >
+
+          <View
+            style={
+              styles.loadingOverlay
+            }
+          >
 
             <View
               style={
-                styles.loadingOverlay
-              }>
+                styles.loadingCard
+              }
+            >
 
-              <View
+              <ActivityIndicator
+                size="large"
+                color={
+                  lightTheme.colors.primary
+                }
+              />
+
+
+              <Text
                 style={
-                  styles.loadingCard
-                }>
-
-                <ActivityIndicator
-                  size="large"
-                  color={
-                    lightTheme.colors
-                      .primary
-                  }
-                />
+                  styles.loadingTitle
+                }
+              >
+                Please wait
+              </Text>
 
 
-                <Text
-                  style={
-                    styles.loadingTitle
-                  }>
-                  Please wait
-                </Text>
-
-
-                <Text
-                  style={
-                    styles.loadingText
-                  }>
-                  {loadingMessage}
-                </Text>
-
-              </View>
+              <Text
+                style={
+                  styles.loadingText
+                }
+              >
+                {loadingMessage}
+              </Text>
 
             </View>
 
-          </Modal>
-        )}
+          </View>
+
+        </Modal>
+      )}
 
     </View>
   );
@@ -1166,87 +1722,87 @@ function DeleteConfirmation({
 
   return (
     <Modal
-      visible={visible}
+      visible={
+        visible
+      }
       transparent
       animationType="fade"
+      statusBarTranslucent
       onRequestClose={
         onCancel
-      }>
+      }
+    >
 
       <View
         style={
           styles.deleteOverlay
-        }>
+        }
+      >
 
         <View
           style={
             styles.deleteDialog
-          }>
-
-
-          {/* Delete icon */}
+          }
+        >
 
           <View
             style={
               styles.deleteIconContainer
-            }>
+            }
+          >
 
-            <Text
-              style={
-                styles.deleteIcon
-              }>
-              !
-            </Text>
+            <FontAwesome6
+              name="trash"
+              size={20}
+              color={
+                lightTheme.colors.danger
+              }
+              iconStyle="solid"
+            />
 
           </View>
 
 
-          {/* Title */}
-
           <Text
             style={
               styles.deleteTitle
-            }>
+            }
+          >
             Delete task?
           </Text>
 
 
-          {/* Message */}
-
           <Text
             style={
               styles.deleteMessage
-            }>
-
+            }
+          >
             {task
               ? `"${task.title}" will be permanently removed.`
               : 'This task will be permanently removed.'}
-
           </Text>
 
-
-          {/* Actions */}
 
           <View
             style={
               styles.deleteActions
-            }>
+            }
+          >
 
             <Pressable
               onPress={
                 onCancel
               }
-
-              disabled={false}
-
               style={
                 styles.cancelButton
-              }>
+              }
+            >
 
               <Text
                 style={
                   styles.cancelButtonText
-                }>
+                }
+              >
                 Cancel
               </Text>
 
@@ -1257,15 +1813,16 @@ function DeleteConfirmation({
               onPress={
                 onConfirm
               }
-
               style={
                 styles.confirmDeleteButton
-              }>
+              }
+            >
 
               <Text
                 style={
                   styles.confirmDeleteText
-                }>
+                }
+              >
                 Delete
               </Text>
 
@@ -1283,577 +1840,1354 @@ function DeleteConfirmation({
 
 
 /* ================================================= */
+/* NOTIFICATIONS SHEET                               */
+/* ================================================= */
+
+interface NotificationsSheetProps {
+  visible: boolean;
+  notifications: Task[];
+  onClose: () => void;
+  onPress: (task: Task) => void;
+}
+
+
+function NotificationsSheet({
+  visible,
+  notifications,
+  onClose,
+  onPress,
+}: NotificationsSheetProps) {
+
+  return (
+    <Modal
+      visible={
+        visible
+      }
+      transparent
+      animationType="slide"
+      statusBarTranslucent
+      onRequestClose={
+        onClose
+      }
+    >
+
+      <View
+        style={
+          styles.notificationOverlay
+        }
+      >
+
+        {/* ================================================= */}
+        {/* BACKDROP                                           */}
+        {/* ================================================= */}
+
+        <Pressable
+          style={
+            styles.notificationBackdrop
+          }
+          onPress={
+            onClose
+          }
+        />
+
+
+        {/* ================================================= */}
+        {/* SHEET                                              */}
+        {/* ================================================= */}
+
+        <View
+          style={
+            styles.notificationSheet
+          }
+        >
+
+          <View
+            style={
+              styles.notificationHandle
+            }
+          />
+
+
+          {/* ================================================= */}
+          {/* HEADER                                             */}
+          {/* ================================================= */}
+
+          <View
+            style={
+              styles.notificationHeader
+            }
+          >
+
+            <View
+              style={
+                styles.notificationHeaderLeft
+              }
+            >
+
+              <View
+                style={
+                  styles.notificationIconContainer
+                }
+              >
+
+                <FontAwesome6
+                  name="bell"
+                  size={17}
+                  color={
+                    lightTheme.colors.primary
+                  }
+                  iconStyle="solid"
+                />
+
+              </View>
+
+
+              <View>
+
+                <Text
+                  style={
+                    styles.notificationTitle
+                  }
+                >
+                  Notifications
+                </Text>
+
+                <Text
+                  style={
+                    styles.notificationSubtitle
+                  }
+                >
+                  Today's task reminders
+                </Text>
+
+              </View>
+
+            </View>
+
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Close notifications"
+              onPress={
+                onClose
+              }
+              style={
+                styles.notificationCloseButton
+              }
+            >
+
+              <FontAwesome6
+                name="xmark"
+                size={17}
+                color={
+                  lightTheme.colors.textSecondary
+                }
+                iconStyle="solid"
+              />
+
+            </Pressable>
+
+          </View>
+
+
+          {/* ================================================= */}
+          {/* CONTENT                                            */}
+          {/* ================================================= */}
+
+          {notifications.length ===
+          0 ? (
+
+            <View
+              style={
+                styles.notificationEmpty
+              }
+            >
+
+              <View
+                style={
+                  styles.notificationEmptyIcon
+                }
+              >
+
+                <FontAwesome6
+                  name="check"
+                  size={22}
+                  color={
+                    lightTheme.colors.success
+                  }
+                  iconStyle="solid"
+                />
+
+              </View>
+
+
+              <Text
+                style={
+                  styles.notificationEmptyTitle
+                }
+              >
+                You're all caught up
+              </Text>
+
+
+              <Text
+                style={
+                  styles.notificationEmptyText
+                }
+              >
+                No task reminders for today.
+              </Text>
+
+            </View>
+
+          ) : (
+
+            <FlatList
+              data={
+                notifications
+              }
+
+              keyExtractor={
+                item =>
+                  item.id
+              }
+
+              showsVerticalScrollIndicator={
+                false
+              }
+
+              contentContainerStyle={
+                styles.notificationList
+              }
+
+              renderItem={({
+                item,
+              }) => (
+
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    `Open task ${item.title}`
+                  }
+                  onPress={() =>
+                    onPress(
+                      item,
+                    )
+                  }
+                  style={({pressed}) => [
+                    styles.notificationItem,
+
+                    pressed &&
+                      styles.buttonPressed,
+                  ]}
+                >
+
+                  <View
+                    style={
+                      styles.notificationItemIcon
+                    }
+                  >
+
+                    <FontAwesome6
+                      name="clock"
+                      size={15}
+                      color={
+                        lightTheme.colors.primary
+                      }
+                      iconStyle="solid"
+                    />
+
+                  </View>
+
+
+                  <View
+                    style={
+                      styles.notificationItemContent
+                    }
+                  >
+
+                    <Text
+                      style={
+                        styles.notificationItemTitle
+                      }
+                      numberOfLines={
+                        1
+                      }
+                    >
+                      {item.title}
+                    </Text>
+
+
+                    <Text
+                      style={
+                        styles.notificationItemTime
+                      }
+                    >
+                      {item.dueTime}
+                    </Text>
+
+                  </View>
+
+
+                  <FontAwesome6
+                    name="chevron-right"
+                    size={14}
+                    color={
+                      lightTheme.colors.textMuted
+                    }
+                    iconStyle="solid"
+                  />
+
+                </Pressable>
+
+              )}
+            />
+
+          )}
+
+        </View>
+
+      </View>
+
+    </Modal>
+  );
+}
+
+
+/* ================================================= */
 /* STYLES                                            */
 /* ================================================= */
 
-const styles = StyleSheet.create({
+const styles =
+  StyleSheet.create({
 
-  /* ================================================= */
-  /* SCREEN                                             */
-  /* ================================================= */
+    /* ================================================= */
+    /* SCREEN                                             */
+    /* ================================================= */
 
-  safeArea: {
-    flex: 1,
+    safeArea: {
+      flex: 1,
 
-    backgroundColor:
-      lightTheme.colors.background,
+      backgroundColor:
+        lightTheme.colors.background,
 
-    paddingTop:
-      Platform.OS === 'android'
-        ? StatusBar.currentHeight ??
-        0
-        : 0,
-  },
+      paddingTop:
+        Platform.OS === 'android'
+          ? StatusBar.currentHeight ??
+            0
+          : 0,
+    },
 
 
-  content: {
-    paddingHorizontal:
-      spacing.xl,
+    content: {
+      paddingHorizontal:
+        spacing.xl,
 
-    /*
-     * This is intentionally larger
-     * than the FAB height.
-     *
-     * It allows the user to scroll
-     * the final task completely above
-     * the floating button.
-     */
-    paddingBottom: 120,
-  },
+      paddingBottom:
+        150,
+    },
 
 
-  /* ================================================= */
-  /* HEADER                                             */
-  /* ================================================= */
+    emptyListContent: {
+      flexGrow: 1,
+    },
 
-  header: {
-    flexDirection: 'row',
 
-    alignItems: 'center',
+    /* ================================================= */
+    /* HEADER                                             */
+    /* ================================================= */
 
-    justifyContent:
-      'space-between',
+    header: {
+      flexDirection:
+        'row',
 
-    paddingTop:
-      spacing.md,
+      alignItems:
+        'center',
 
-    paddingBottom:
-      spacing.xxl,
-  },
+      justifyContent:
+        'space-between',
 
+      paddingTop:
+        spacing.md,
 
-  greetingContainer: {
-    flex: 1,
-  },
+      paddingBottom:
+        spacing.xxl,
+    },
 
 
-  greeting: {
-    ...typography.body,
+    greetingContainer: {
+      flex: 1,
+    },
 
-    color:
-      lightTheme.colors.textSecondary,
-  },
 
+    greeting: {
+      ...typography.body,
 
-  name: {
-    ...typography.display,
+      color:
+        lightTheme.colors.textSecondary,
+    },
 
-    color:
-      lightTheme.colors.text,
 
-    marginTop: 2,
-  },
+    name: {
+      ...typography.display,
 
+      color:
+        lightTheme.colors.text,
 
-  notificationButton: {
-    width: 46,
+      marginTop: 2,
+    },
 
-    height: 46,
 
-    borderRadius: 15,
+    notificationButton: {
+      width: 46,
 
-    backgroundColor:
-      lightTheme.colors.surface,
+      height: 46,
 
-    borderWidth: 1,
+      borderRadius: 15,
 
-    borderColor:
-      lightTheme.colors.border,
+      backgroundColor:
+        lightTheme.colors.surface,
 
-    alignItems: 'center',
+      borderWidth: 1,
 
-    justifyContent: 'center',
-  },
+      borderColor:
+        lightTheme.colors.border,
 
+      alignItems:
+        'center',
 
-  notificationIcon: {
-    fontSize: 18,
-  },
+      justifyContent:
+        'center',
 
+      ...shadows.sm,
+    },
 
-  notificationDot: {
-    position: 'absolute',
 
-    top: 9,
+    notificationBadge: {
+      position:
+        'absolute',
 
-    right: 9,
+      top: 5,
 
-    width: 7,
+      right: 5,
 
-    height: 7,
+      minWidth: 16,
 
-    borderRadius: 4,
+      height: 16,
 
-    backgroundColor:
-      lightTheme.colors.danger,
+      borderRadius: 8,
 
-    borderWidth: 1,
+      paddingHorizontal: 3,
 
-    borderColor:
-      lightTheme.colors.surface,
-  },
+      backgroundColor:
+        lightTheme.colors.danger,
 
+      alignItems:
+        'center',
 
-  /* ================================================= */
-  /* TASK SECTION                                       */
-  /* ================================================= */
+      justifyContent:
+        'center',
 
-  sectionHeader: {
-    flexDirection: 'row',
+      borderWidth: 1,
 
-    alignItems: 'center',
+      borderColor:
+        lightTheme.colors.surface,
+    },
 
-    justifyContent:
-      'space-between',
 
-    marginBottom:
-      spacing.md,
-  },
+    notificationBadgeText: {
+      color:
+        '#FFFFFF',
 
+      fontSize: 9,
 
-  sectionTitle: {
-    ...typography.title,
+      fontWeight:
+        '800',
+    },
 
-    color:
-      lightTheme.colors.text,
-  },
 
+    /* ================================================= */
+    /* TASK SECTION                                      */
+    /* ================================================= */
 
-  seeAll: {
-    ...typography.bodyMedium,
+    sectionHeader: {
+      flexDirection:
+        'row',
 
-    color:
-      lightTheme.colors.primary,
-  },
+      alignItems:
+        'center',
 
+      justifyContent:
+        'space-between',
 
-  /* ================================================= */
-  /* FILTERS                                           */
-  /* ================================================= */
+      marginTop:
+        spacing.xxl,
 
-  filters: {
-    flexDirection: 'row',
+      marginBottom:
+        spacing.md,
+    },
 
-    marginBottom:
-      spacing.lg,
-  },
 
+    sectionTitle: {
+      ...typography.title,
 
-  filter: {
-    paddingHorizontal: 15,
+      color:
+        lightTheme.colors.text,
+    },
 
-    paddingVertical: 9,
 
-    borderRadius: 10,
+    seeAll: {
+      ...typography.bodyMedium,
 
-    marginRight:
-      spacing.sm,
-  },
+      color:
+        lightTheme.colors.primary,
+    },
 
 
-  filterActive: {
-    backgroundColor:
-      lightTheme.colors.primarySoft,
-  },
+    /* ================================================= */
+    /* FILTERS                                           */
+    /* ================================================= */
 
+    filters: {
+      flexDirection:
+        'row',
 
-  filterText: {
-    ...typography.caption,
+      marginBottom:
+        spacing.lg,
+    },
 
-    color:
-      lightTheme.colors.textSecondary,
-  },
 
+    filter: {
+      paddingHorizontal:
+        15,
 
-  filterTextActive: {
-    color:
-      lightTheme.colors.primary,
+      paddingVertical:
+        9,
 
-    fontWeight: '700',
-  },
+      borderRadius:
+        10,
 
+      marginRight:
+        spacing.sm,
+    },
 
-  /* ================================================= */
-  /* EMPTY STATE                                        */
-  /* ================================================= */
 
-  empty: {
-    alignItems: 'center',
+    filterActive: {
+      backgroundColor:
+        lightTheme.colors.primarySoft,
+    },
 
-    paddingTop:
-      spacing.huge,
-  },
 
+    filterText: {
+      ...typography.caption,
 
-  emptyIconContainer: {
-    width: 56,
+      color:
+        lightTheme.colors.textSecondary,
+    },
 
-    height: 56,
 
-    borderRadius: 28,
+    filterTextActive: {
+      color:
+        lightTheme.colors.primary,
 
-    backgroundColor:
-      lightTheme.colors.successSoft,
+      fontWeight:
+        '700',
+    },
 
-    alignItems: 'center',
 
-    justifyContent: 'center',
-  },
+    taskSeparator: {
+      height:
+        spacing.md,
+    },
 
 
-  emptyIcon: {
-    fontSize: 25,
+    /* ================================================= */
+    /* EMPTY                                             */
+    /* ================================================= */
 
-    fontWeight: '700',
+    empty: {
+      flex: 1,
 
-    color:
-      lightTheme.colors.success,
-  },
+      alignItems:
+        'center',
 
+      justifyContent:
+        'center',
 
-  emptyTitle: {
-    ...typography.heading,
+      paddingHorizontal:
+        spacing.xl,
 
-    color:
-      lightTheme.colors.text,
+      paddingVertical:
+        60,
+    },
 
-    marginTop:
-      spacing.lg,
-  },
 
+    emptyIconContainer: {
+      width: 56,
 
-  emptyText: {
-    ...typography.body,
+      height: 56,
 
-    color:
-      lightTheme.colors.textSecondary,
+      borderRadius: 28,
 
-    textAlign: 'center',
+      alignItems:
+        'center',
 
-    marginTop:
-      spacing.xs,
-  },
+      justifyContent:
+        'center',
 
+      backgroundColor:
+        lightTheme.colors.successSoft,
+    },
 
-  emptyButton: {
-    marginTop:
-      spacing.lg,
 
-    paddingHorizontal:
-      spacing.xl,
+    emptyIcon: {
+      fontSize: 26,
 
-    paddingVertical:
-      spacing.md,
+      color:
+        lightTheme.colors.success,
 
-    borderRadius:
-      lightTheme.radius.md,
+      fontWeight:
+        '700',
+    },
 
-    backgroundColor:
-      lightTheme.colors.primary,
-  },
 
+    emptyTitle: {
+      ...typography.title,
 
-  emptyButtonText: {
-    ...typography.button,
+      color:
+        lightTheme.colors.text,
 
-    color: '#FFFFFF',
-  },
+      marginTop:
+        spacing.lg,
+    },
 
 
-  /* ================================================= */
-  /* FAB                                                */
-  /* ================================================= */
+    emptyText: {
+      ...typography.body,
 
-  fab: {
-    position: 'absolute',
+      color:
+        lightTheme.colors.textSecondary,
 
-    right: 20,
+      textAlign:
+        'center',
 
-    /*
-     * IMPORTANT:
-     * Do not hard-code bottom: 34 anymore.
-     * The actual bottom value is calculated
-     * from the device safe-area inset.
-     */
-    bottom: 30,
+      lineHeight: 23,
 
-    width: 58,
+      marginTop:
+        spacing.sm,
+    },
 
-    height: 58,
 
-    borderRadius: 18,
+    emptyButton: {
+      minWidth: 180,
 
-    backgroundColor:
-      lightTheme.colors.primary,
+      height: 52,
 
-    borderWidth: 1,
+      paddingHorizontal:
+        spacing.xl,
 
-    borderColor:
-      'rgba(255,255,255,0.15)',
+      borderRadius:
+        lightTheme.radius.md,
 
-    alignItems: 'center',
+      backgroundColor:
+        lightTheme.colors.primary,
 
-    justifyContent: 'center',
+      alignItems:
+        'center',
 
-    ...shadows.floating,
-  },
+      justifyContent:
+        'center',
 
+      marginTop:
+        spacing.xl,
 
-  fabPressed: {
-    transform: [
-      {
-        scale: 0.94,
+      elevation: 3,
+    },
+
+
+    emptyButtonText: {
+      ...typography.button,
+
+      color:
+        '#FFFFFF',
+    },
+
+
+    /* ================================================= */
+    /* FAB                                               */
+    /* ================================================= */
+
+    fab: {
+      position:
+        'absolute',
+
+      right:
+        spacing.xl,
+
+      width: 58,
+
+      height: 58,
+
+      borderRadius: 18,
+
+      backgroundColor:
+        lightTheme.colors.primary,
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'center',
+
+      elevation: 7,
+
+      shadowColor:
+        '#000000',
+
+      shadowOffset: {
+        width: 0,
+
+        height: 4,
       },
-    ],
 
-    opacity: 0.9,
-  },
+      shadowOpacity:
+        0.18,
 
+      shadowRadius:
+        7,
+    },
 
-  fabText: {
-    color: '#FFFFFF',
 
-    fontSize: 30,
+    fabPressed: {
+      opacity:
+        0.85,
 
-    lineHeight: 32,
+      transform: [
+        {
+          scale:
+            0.96,
+        },
+      ],
+    },
 
-    fontWeight: '300',
 
-    marginTop: -2,
-  },
+    /* ================================================= */
+    /* COMMON                                             */
+    /* ================================================= */
 
+    buttonPressed: {
+      opacity:
+        0.78,
+    },
 
-  /* ================================================= */
-  /* DISABLED                                           */
-  /* ================================================= */
 
-  disabledButton: {
-    opacity: 0.55,
-  },
+    disabledButton: {
+      opacity:
+        0.5,
+    },
 
 
-  /* ================================================= */
-  /* DELETE DIALOG                                     */
-  /* ================================================= */
+    /* ================================================= */
+    /* DELETE                                             */
+    /* ================================================= */
 
-  deleteOverlay: {
-    flex: 1,
+    deleteOverlay: {
+      flex: 1,
 
-    backgroundColor:
-      'rgba(15, 18, 25, 0.55)',
+      backgroundColor:
+        'rgba(15,18,25,0.52)',
 
-    alignItems: 'center',
+      alignItems:
+        'center',
 
-    justifyContent: 'center',
+      justifyContent:
+        'center',
 
-    paddingHorizontal:
-      spacing.xl,
-  },
+      paddingHorizontal:
+        spacing.xl,
+    },
 
 
-  deleteDialog: {
-    width: '100%',
+    deleteDialog: {
+      width:
+        '100%',
 
-    backgroundColor:
-      lightTheme.colors.surface,
+      backgroundColor:
+        lightTheme.colors.surface,
 
-    borderRadius:
-      lightTheme.radius.xl,
+      borderRadius:
+        24,
 
-    padding:
-      spacing.xl,
+      padding:
+        spacing.xl,
 
-    ...shadows.floating,
-  },
+      elevation:
+        24,
 
+      shadowColor:
+        '#000000',
 
-  deleteIconContainer: {
-    width: 48,
+      shadowOffset: {
+        width: 0,
 
-    height: 48,
+        height: 8,
+      },
 
-    borderRadius: 24,
+      shadowOpacity:
+        0.2,
 
-    backgroundColor:
-      lightTheme.colors.dangerSoft,
+      shadowRadius:
+        18,
+    },
 
-    alignItems: 'center',
 
-    justifyContent: 'center',
+    deleteIconContainer: {
+      width: 46,
 
-    marginBottom:
-      spacing.lg,
-  },
+      height: 46,
 
+      borderRadius: 23,
 
-  deleteIcon: {
-    fontSize: 23,
+      backgroundColor:
+        lightTheme.colors.dangerSoft,
 
-    fontWeight: '800',
+      alignItems:
+        'center',
 
-    color:
-      lightTheme.colors.danger,
-  },
+      justifyContent:
+        'center',
 
+      marginBottom:
+        spacing.lg,
+    },
 
-  deleteTitle: {
-    ...typography.title,
 
-    color:
-      lightTheme.colors.text,
-  },
+    deleteTitle: {
+      ...typography.title,
 
+      color:
+        lightTheme.colors.text,
+    },
 
-  deleteMessage: {
-    ...typography.body,
 
-    color:
-      lightTheme.colors.textSecondary,
+    deleteMessage: {
+      ...typography.body,
 
-    lineHeight: 22,
+      color:
+        lightTheme.colors.textSecondary,
 
-    marginTop:
-      spacing.sm,
-  },
+      lineHeight:
+        22,
 
+      marginTop:
+        spacing.sm,
+    },
 
-  deleteActions: {
-    flexDirection: 'row',
 
-    gap: spacing.md,
+    deleteActions: {
+      flexDirection:
+        'row',
 
-    marginTop:
-      spacing.xxl,
-  },
+      gap:
+        spacing.md,
 
+      marginTop:
+        spacing.xl,
+    },
 
-  cancelButton: {
-    flex: 1,
 
-    height: 50,
+    cancelButton: {
+      flex: 1,
 
-    borderRadius:
-      lightTheme.radius.md,
+      height: 50,
 
-    backgroundColor:
-      lightTheme.colors.surfaceSecondary,
+      borderRadius:
+        lightTheme.radius.md,
 
-    alignItems: 'center',
+      borderWidth: 1,
 
-    justifyContent: 'center',
-  },
+      borderColor:
+        lightTheme.colors.border,
 
+      alignItems:
+        'center',
 
-  cancelButtonText: {
-    ...typography.button,
+      justifyContent:
+        'center',
+    },
 
-    color:
-      lightTheme.colors.text,
-  },
 
+    cancelButtonText: {
+      ...typography.button,
 
-  confirmDeleteButton: {
-    flex: 1,
+      color:
+        lightTheme.colors.text,
+    },
 
-    height: 50,
 
-    borderRadius:
-      lightTheme.radius.md,
+    confirmDeleteButton: {
+      flex: 1,
 
-    backgroundColor:
-      lightTheme.colors.danger,
+      height: 50,
 
-    alignItems: 'center',
+      borderRadius:
+        lightTheme.radius.md,
 
-    justifyContent: 'center',
-  },
+      backgroundColor:
+        lightTheme.colors.danger,
 
+      alignItems:
+        'center',
 
-  confirmDeleteText: {
-    ...typography.button,
+      justifyContent:
+        'center',
+    },
 
-    color: '#FFFFFF',
-  },
 
+    confirmDeleteText: {
+      ...typography.button,
 
-  /* ================================================= */
-  /* LOADING                                            */
-  /* ================================================= */
+      color:
+        '#FFFFFF',
+    },
 
-  loadingOverlay: {
-    flex: 1,
 
-    backgroundColor:
-      'rgba(15, 18, 25, 0.35)',
+    /* ================================================= */
+    /* LOADING                                           */
+    /* ================================================= */
 
-    alignItems: 'center',
+    loadingOverlay: {
+      flex: 1,
 
-    justifyContent: 'center',
-  },
+      backgroundColor:
+        'rgba(15,18,25,0.35)',
 
+      alignItems:
+        'center',
 
-  loadingCard: {
-    minWidth: 190,
+      justifyContent:
+        'center',
 
-    backgroundColor:
-      lightTheme.colors.surface,
+      paddingHorizontal:
+        spacing.xl,
+    },
 
-    borderRadius:
-      lightTheme.radius.xl,
 
-    paddingVertical:
-      spacing.xl,
+    loadingCard: {
+      width:
+        '100%',
 
-    paddingHorizontal:
-      spacing.xxl,
+      maxWidth:
+        300,
 
-    alignItems: 'center',
+      backgroundColor:
+        lightTheme.colors.surface,
 
-    ...shadows.floating,
-  },
+      borderRadius:
+        24,
 
+      padding:
+        spacing.xl,
 
-  loadingTitle: {
-    ...typography.bodyMedium,
+      alignItems:
+        'center',
 
-    color:
-      lightTheme.colors.text,
+      elevation:
+        20,
 
-    marginTop:
-      spacing.md,
-  },
+      shadowColor:
+        '#000000',
 
+      shadowOffset: {
+        width: 0,
 
-  loadingText: {
-    ...typography.caption,
+        height: 8,
+      },
 
-    color:
-      lightTheme.colors.textSecondary,
+      shadowOpacity:
+        0.2,
 
-    marginTop:
-      spacing.xs,
+      shadowRadius:
+        18,
+    },
 
-    textAlign: 'center',
-  },
 
-});
+    loadingTitle: {
+      ...typography.title,
+
+      color:
+        lightTheme.colors.text,
+
+      marginTop:
+        spacing.lg,
+    },
+
+
+    loadingText: {
+      ...typography.body,
+
+      color:
+        lightTheme.colors.textSecondary,
+
+      marginTop:
+        spacing.xs,
+
+      textAlign:
+        'center',
+    },
+
+
+    /* ================================================= */
+    /* NOTIFICATION MODAL                                */
+    /* ================================================= */
+
+    notificationOverlay: {
+      flex: 1,
+
+      justifyContent:
+        'flex-end',
+
+      /*
+       * Keep the dim layer on the full modal container.
+       * This guarantees the page underneath is visibly
+       * separated from the notification sheet on Android.
+       *
+       * This is intentionally the same backdrop color
+       * used by Create Task and Task Details.
+       */
+      backgroundColor:
+        'rgba(15,18,25,0.52)',
+    },
+
+
+    /*
+     * Transparent touch-catcher only.
+     *
+     * The actual dimming is handled by notificationOverlay
+     * above so Android cannot render the backdrop as visually
+     * transparent.
+     */
+    notificationBackdrop: {
+      ...StyleSheet.absoluteFillObject,
+
+      backgroundColor:
+        'transparent',
+    },
+
+
+    notificationSheet: {
+      width:
+        '100%',
+
+      maxHeight:
+        '78%',
+
+      backgroundColor:
+        lightTheme.colors.surface,
+
+      borderTopLeftRadius:
+        28,
+
+      borderTopRightRadius:
+        28,
+
+      paddingTop:
+        spacing.md,
+
+      paddingBottom:
+        spacing.xxl,
+
+      elevation:
+        24,
+
+      shadowColor:
+        '#000000',
+
+      shadowOffset: {
+        width: 0,
+
+        height: -8,
+      },
+
+      shadowOpacity:
+        0.18,
+
+      shadowRadius:
+        20,
+    },
+
+
+    notificationHandle: {
+      alignSelf:
+        'center',
+
+      width:
+        42,
+
+      height:
+        4,
+
+      borderRadius:
+        2,
+
+      backgroundColor:
+        lightTheme.colors.border,
+
+      marginBottom:
+        spacing.lg,
+    },
+
+
+    notificationHeader: {
+      flexDirection:
+        'row',
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'space-between',
+
+      paddingHorizontal:
+        spacing.xl,
+
+      paddingBottom:
+        spacing.lg,
+    },
+
+
+    notificationHeaderLeft: {
+      flexDirection:
+        'row',
+
+      alignItems:
+        'center',
+
+      flex: 1,
+    },
+
+
+    notificationIconContainer: {
+      width:
+        42,
+
+      height:
+        42,
+
+      borderRadius:
+        14,
+
+      backgroundColor:
+        lightTheme.colors.primarySoft,
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'center',
+
+      marginRight:
+        spacing.md,
+    },
+
+
+    notificationTitle: {
+      ...typography.title,
+
+      color:
+        lightTheme.colors.text,
+    },
+
+
+    notificationSubtitle: {
+      ...typography.caption,
+
+      color:
+        lightTheme.colors.textSecondary,
+
+      marginTop:
+        spacing.xs,
+    },
+
+
+    notificationCloseButton: {
+      width:
+        40,
+
+      height:
+        40,
+
+      borderRadius:
+        20,
+
+      backgroundColor:
+        lightTheme.colors.background,
+
+      borderWidth:
+        1,
+
+      borderColor:
+        lightTheme.colors.border,
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'center',
+    },
+
+
+    notificationEmpty: {
+      alignItems:
+        'center',
+
+      justifyContent:
+        'center',
+
+      paddingHorizontal:
+        spacing.xl,
+
+      paddingVertical:
+        70,
+    },
+
+
+    notificationEmptyIcon: {
+      width:
+        56,
+
+      height:
+        56,
+
+      borderRadius:
+        28,
+
+      backgroundColor:
+        lightTheme.colors.successSoft,
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'center',
+
+      marginBottom:
+        spacing.lg,
+    },
+
+
+    notificationEmptyTitle: {
+      ...typography.title,
+
+      color:
+        lightTheme.colors.text,
+
+      textAlign:
+        'center',
+    },
+
+
+    notificationEmptyText: {
+      ...typography.body,
+
+      color:
+        lightTheme.colors.textSecondary,
+
+      textAlign:
+        'center',
+
+      marginTop:
+        spacing.sm,
+    },
+
+
+    notificationList: {
+      paddingHorizontal:
+        spacing.xl,
+
+      paddingBottom:
+        spacing.xl,
+    },
+
+
+    notificationItem: {
+      flexDirection:
+        'row',
+
+      alignItems:
+        'center',
+
+      minHeight:
+        64,
+
+      paddingHorizontal:
+        spacing.md,
+
+      borderRadius:
+        lightTheme.radius.md,
+
+      backgroundColor:
+        lightTheme.colors.background,
+
+      borderWidth:
+        1,
+
+      borderColor:
+        lightTheme.colors.border,
+
+      marginBottom:
+        spacing.sm,
+    },
+
+
+    notificationItemIcon: {
+      width:
+        36,
+
+      height:
+        36,
+
+      borderRadius:
+        12,
+
+      backgroundColor:
+        lightTheme.colors.primarySoft,
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'center',
+
+      marginRight:
+        spacing.md,
+    },
+
+
+    notificationItemContent: {
+      flex: 1,
+    },
+
+
+    notificationItemTitle: {
+      ...typography.bodyMedium,
+
+      color:
+        lightTheme.colors.text,
+
+      fontWeight:
+        '600',
+    },
+
+
+    notificationItemTime: {
+      ...typography.caption,
+
+      color:
+        lightTheme.colors.textSecondary,
+
+      marginTop:
+        2,
+    },
+
+  });
