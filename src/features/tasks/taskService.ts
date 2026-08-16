@@ -137,11 +137,11 @@ function validateTask(task: Task): void {
     );
   }
 
-  if (!task.dueDate.trim()) {
-    throw new Error(
-      'Task due date is required.',
-    );
-  }
+  // if (!task.dueDate.trim()) {
+  //   throw new Error(
+  //     'Task due date is required.',
+  //   );
+  // }
 
   const validPriorities = [
     'low',

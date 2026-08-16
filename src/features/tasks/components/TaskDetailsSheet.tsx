@@ -8,11 +8,30 @@ import {
   View,
 } from 'react-native';
 
-import type {Task} from '../types';
+import {
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 
-import {lightTheme} from '../../../theme/lightTheme';
-import {spacing} from '../../../theme/spacing';
-import {typography} from '../../../theme/typography';
+import type {
+  Task,
+} from '../types';
+
+import {
+  lightTheme,
+} from '../../../theme/lightTheme';
+
+import {
+  spacing,
+} from '../../../theme/spacing';
+
+import {
+  typography,
+} from '../../../theme/typography';
+
+
+/* ================================================= */
+/* TYPES                                             */
+/* ================================================= */
 
 interface TaskDetailsSheetProps {
   visible: boolean;
@@ -23,6 +42,11 @@ interface TaskDetailsSheetProps {
   onDelete: (task: Task) => void;
 }
 
+
+/* ================================================= */
+/* COMPONENT                                         */
+/* ================================================= */
+
 export function TaskDetailsSheet({
   visible,
   task,
@@ -31,187 +55,403 @@ export function TaskDetailsSheet({
   onToggle,
   onDelete,
 }: TaskDetailsSheetProps) {
+
+  /*
+   * Required so the bottom actions stay above
+   * Android navigation / gesture area.
+   */
+  const insets =
+    useSafeAreaInsets();
+
+
+  /*
+   * Don't render the modal when there is
+   * no selected task.
+   */
   if (!task) {
     return null;
   }
 
+
   const isCompleted =
     task.status === 'completed';
+
 
   return (
     <Modal
       visible={visible}
       transparent
       animationType="slide"
-      onRequestClose={onClose}>
-      <View style={styles.container}>
-        {/* Backdrop */}
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
+
+      {/* ================================================= */}
+      {/* MODAL OVERLAY                                     */}
+      {/* ================================================= */}
+
+      <View
+        style={styles.overlay}
+      >
+
+        {/* ================================================= */}
+        {/* BACKDROP                                           */}
+        {/* ================================================= */}
 
         <Pressable
           style={styles.backdrop}
           onPress={onClose}
         />
 
-        {/* Bottom Sheet */}
 
-        <View style={styles.sheet}>
-          {/* Handle */}
+        {/* ================================================= */}
+        {/* BOTTOM SHEET                                      */}
+        {/* ================================================= */}
 
-          <View style={styles.handle} />
+        <View
+          style={[
+            styles.sheet,
 
-          {/* Header */}
+            {
+              /*
+               * Keep the sheet above the Android
+               * navigation / gesture area.
+               */
+              paddingBottom:
+                Math.max(
+                  insets.bottom,
+                  12,
+                ) + 12,
+            },
+          ]}
+        >
 
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>
-              Task details
-            </Text>
+          {/* ================================================= */}
+          {/* HANDLE                                             */}
+          {/* ================================================= */}
+
+          <View
+            style={styles.handle}
+          />
+
+
+          {/* ================================================= */}
+          {/* HEADER                                             */}
+          {/* ================================================= */}
+
+          <View
+            style={styles.header}
+          >
+
+            <View
+              style={
+                styles.headerContent
+              }
+            >
+
+              <Text
+                style={
+                  styles.headerTitle
+                }
+              >
+                Task details
+              </Text>
+
+              <Text
+                style={
+                  styles.subtitle
+                }
+              >
+                View and manage your task
+              </Text>
+
+            </View>
+
+
+            {/* ================================================= */}
+            {/* CLOSE                                             */}
+            {/* ================================================= */}
 
             <Pressable
               onPress={onClose}
-              style={styles.closeButton}
+              style={
+                styles.closeButton
+              }
               accessibilityRole="button"
-              accessibilityLabel="Close task details">
-              <Text style={styles.closeText}>
+              accessibilityLabel="Close task details"
+            >
+
+              <Text
+                style={
+                  styles.closeText
+                }
+              >
                 ×
               </Text>
+
             </Pressable>
+
           </View>
 
-          {/* Task Information */}
 
-          <View style={styles.taskRow}>
+          {/* ================================================= */}
+          {/* TASK INFORMATION                                  */}
+          {/* ================================================= */}
+
+          <View
+            style={styles.taskRow}
+          >
+
+            {/* ================================================= */}
+            {/* STATUS                                             */}
+            {/* ================================================= */}
+
             <View
               style={[
                 styles.statusCircle,
+
                 isCompleted &&
                   styles.statusCircleCompleted,
-              ]}>
+              ]}
+            >
+
               {isCompleted && (
+
                 <Text
                   style={
                     styles.checkmark
-                  }>
+                  }
+                >
                   ✓
                 </Text>
+
               )}
+
             </View>
 
+
+            {/* ================================================= */}
+            {/* TASK CONTENT                                      */}
+            {/* ================================================= */}
+
             <View
-              style={styles.taskContent}>
+              style={
+                styles.taskContent
+              }
+            >
+
               <Text
                 style={[
                   styles.taskTitle,
+
                   isCompleted &&
                     styles.completedTitle,
-                ]}>
+                ]}
+              >
                 {task.title}
               </Text>
 
+
               {task.description ? (
+
                 <Text
-                  style={styles.description}>
+                  style={
+                    styles.description
+                  }
+                >
                   {task.description}
                 </Text>
+
               ) : (
+
                 <Text
-                  style={styles.emptyDescription}>
+                  style={
+                    styles.emptyDescription
+                  }
+                >
                   No description added.
                 </Text>
+
               )}
+
             </View>
+
           </View>
 
-          {/* Task Metadata */}
 
-          <View style={styles.metadataCard}>
+          {/* ================================================= */}
+          {/* TASK METADATA CARD                                */}
+          {/* ================================================= */}
+
+          <View
+            style={
+              styles.metadataCard
+            }
+          >
+
+            {/* ================================================= */}
+            {/* DUE DATE                                           */}
+            {/* ================================================= */}
+
             <MetadataItem
               label="DUE DATE"
-              value={task.dueDate}
+              value={
+                task.dueDate ||
+                'Not set'
+              }
             />
 
-            {task.dueTime ? (
-              <MetadataItem
-                label="TIME"
-                value={task.dueTime}
-              />
-            ) : (
-              <MetadataItem
-                label="TIME"
-                value="Not set"
-              />
-            )}
+
+            {/* ================================================= */}
+            {/* TIME                                               */}
+            {/* ================================================= */}
+
+            <MetadataItem
+              label="TIME"
+              value={
+                task.dueTime ||
+                'Not set'
+              }
+            />
+
+
+            {/* ================================================= */}
+            {/* PRIORITY                                           */}
+            {/* ================================================= */}
 
             <MetadataItem
               label="PRIORITY"
-              value={capitalize(
-                task.priority,
-              )}
-              priority={task.priority}
+              value={
+                capitalize(
+                  task.priority,
+                )
+              }
+              priority={
+                task.priority
+              }
             />
+
           </View>
 
-          {/* Actions */}
 
-          <View style={styles.actions}>
-            {/* Complete */}
+          {/* ================================================= */}
+          {/* ACTIONS                                           */}
+          {/* ================================================= */}
+
+          <View
+            style={
+              styles.actions
+            }
+          >
+
+            {/* ================================================= */}
+            {/* COMPLETE / INCOMPLETE                             */}
+            {/* ================================================= */}
 
             <Pressable
               onPress={() =>
                 onToggle(task)
               }
-              style={[
+              style={({pressed}) => [
                 styles.primaryButton,
+
                 isCompleted &&
                   styles.completedButton,
+
+                pressed &&
+                  styles.buttonPressed,
               ]}
-              accessibilityRole="button">
+              accessibilityRole="button"
+              accessibilityLabel={
+                isCompleted
+                  ? 'Mark task as incomplete'
+                  : 'Mark task as complete'
+              }
+            >
+
               <Text
                 style={[
                   styles.primaryButtonText,
+
                   isCompleted &&
                     styles.completedButtonText,
-                ]}>
+                ]}
+              >
                 {isCompleted
                   ? 'Mark as incomplete'
                   : 'Mark as complete'}
               </Text>
+
             </Pressable>
 
-            {/* Edit */}
+
+            {/* ================================================= */}
+            {/* EDIT                                               */}
+            {/* ================================================= */}
 
             <Pressable
               onPress={() =>
                 onEdit(task)
               }
-              style={styles.secondaryButton}
-              accessibilityRole="button">
+              style={({pressed}) => [
+                styles.secondaryButton,
+
+                pressed &&
+                  styles.buttonPressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Edit task"
+            >
+
               <Text
                 style={
                   styles.secondaryButtonText
-                }>
+                }
+              >
                 Edit task
               </Text>
+
             </Pressable>
 
-            {/* Delete */}
+
+            {/* ================================================= */}
+            {/* DELETE                                             */}
+            {/* ================================================= */}
 
             <Pressable
               onPress={() =>
                 onDelete(task)
               }
-              style={styles.deleteButton}
-              accessibilityRole="button">
+              style={({pressed}) => [
+                styles.deleteButton,
+
+                pressed &&
+                  styles.deletePressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Delete task"
+            >
+
               <Text
-                style={styles.deleteText}>
+                style={
+                  styles.deleteText
+                }
+              >
                 Delete task
               </Text>
+
             </Pressable>
+
           </View>
+
         </View>
+
       </View>
+
     </Modal>
   );
 }
+
 
 /* ================================================= */
 /* METADATA ITEM                                     */
@@ -223,23 +463,41 @@ interface MetadataItemProps {
   priority?: Task['priority'];
 }
 
+
 function MetadataItem({
   label,
   value,
   priority,
 }: MetadataItemProps) {
+
   return (
-    <View style={styles.metadataItem}>
-      <Text style={styles.metadataLabel}>
+    <View
+      style={
+        styles.metadataItem
+      }
+    >
+
+      <Text
+        style={
+          styles.metadataLabel
+        }
+      >
         {label}
       </Text>
 
+
       <View
-        style={styles.metadataValueRow}>
-        {priority && (
+        style={
+          styles.metadataValueRow
+        }
+      >
+
+        {priority ? (
+
           <View
             style={[
               styles.priorityDot,
+
               {
                 backgroundColor:
                   getPriorityColor(
@@ -248,23 +506,34 @@ function MetadataItem({
               },
             ]}
           />
-        )}
+
+        ) : null}
+
 
         <Text
           numberOfLines={1}
-          style={styles.metadataValue}>
+          style={
+            styles.metadataValue
+          }
+        >
           {value}
         </Text>
+
       </View>
+
     </View>
   );
 }
+
 
 /* ================================================= */
 /* HELPERS                                           */
 /* ================================================= */
 
-function capitalize(value: string) {
+function capitalize(
+  value: string,
+) {
+
   if (!value) {
     return '';
   }
@@ -275,10 +544,13 @@ function capitalize(value: string) {
   );
 }
 
+
 function getPriorityColor(
   priority: Task['priority'],
 ) {
+
   switch (priority) {
+
     case 'high':
       return lightTheme.colors.danger;
 
@@ -291,361 +563,539 @@ function getPriorityColor(
   }
 }
 
+
 /* ================================================= */
 /* STYLES                                            */
 /* ================================================= */
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+const styles =
+  StyleSheet.create({
 
-    justifyContent: 'flex-end',
-  },
+    /* ================================================= */
+    /* OVERLAY                                           */
+    /* ================================================= */
 
-  backdrop: {
-    ...StyleSheet.absoluteFill,
+    overlay: {
+      flex: 1,
 
-    backgroundColor:
-      'rgba(15, 18, 25, 0.50)',
-  },
+      justifyContent:
+        'flex-end',
+    },
 
-  sheet: {
-    backgroundColor:
-      lightTheme.colors.background,
 
-    borderTopLeftRadius: 28,
+    /* ================================================= */
+    /* BACKDROP                                          */
+    /* ================================================= */
 
-    borderTopRightRadius: 28,
+    backdrop: {
+      /*
+       * Same treatment as Create Task.
+       *
+       * This is what makes the dashboard/list
+       * look darker behind the white sheet.
+       */
+      ...StyleSheet.absoluteFill,
 
-    paddingHorizontal:
-      spacing.xl,
+      backgroundColor:
+        'rgba(15, 18, 25, 0.52)',
+    },
 
-    paddingTop: spacing.md,
 
-    paddingBottom: 34,
+    /* ================================================= */
+    /* SHEET                                             */
+    /* ================================================= */
 
-    /*
-     * Prevent the sheet from becoming
-     * too tall on smaller devices.
-     */
-    maxHeight: '88%',
-  },
+    sheet: {
+      width: '100%',
 
-  handle: {
-    alignSelf: 'center',
+      /*
+       * Same bottom-sheet sizing philosophy
+       * as the Create/Edit Task sheet.
+       *
+       * Don't force a fixed height.
+       */
+      maxHeight: '88%',
 
-    width: 42,
+      /*
+       * White surface makes the details page
+       * clearly sit above the dashboard.
+       */
+      backgroundColor:
+        lightTheme.colors.surface,
 
-    height: 4,
+      borderTopLeftRadius: 28,
 
-    borderRadius: 2,
+      borderTopRightRadius: 28,
 
-    backgroundColor:
-      lightTheme.colors.border,
+      paddingTop:
+        spacing.md,
 
-    marginBottom: spacing.lg,
-  },
+      /*
+       * Android elevation.
+       */
+      elevation: 24,
 
-  /* ========================= */
-  /* HEADER */
-  /* ========================= */
+      /*
+       * iOS shadow.
+       */
+      shadowColor:
+        '#000000',
 
-  header: {
-    flexDirection: 'row',
+      shadowOffset: {
+        width: 0,
+        height: -8,
+      },
 
-    alignItems: 'center',
+      shadowOpacity:
+        0.18,
 
-    justifyContent:
-      'space-between',
+      shadowRadius:
+        20,
 
-    marginBottom:
-      spacing.xxl,
-  },
+      /*
+       * Keep the rounded top corners clean.
+       */
+      overflow: 'hidden',
+    },
 
-  headerTitle: {
-    ...typography.title,
 
-    color:
-      lightTheme.colors.text,
-  },
+    /* ================================================= */
+    /* HANDLE                                             */
+    /* ================================================= */
 
-  closeButton: {
-    width: 40,
+    handle: {
+      alignSelf: 'center',
 
-    height: 40,
+      width: 42,
 
-    borderRadius: 20,
+      height: 4,
 
-    alignItems: 'center',
+      borderRadius: 2,
 
-    justifyContent: 'center',
+      backgroundColor:
+        lightTheme.colors.border,
 
-    backgroundColor:
-      lightTheme.colors.surface,
+      marginBottom:
+        spacing.lg,
+    },
 
-    borderWidth: 1,
 
-    borderColor:
-      lightTheme.colors.border,
-  },
+    /* ================================================= */
+    /* HEADER                                             */
+    /* ================================================= */
 
-  closeText: {
-    fontSize: 26,
+    header: {
+      flexDirection: 'row',
 
-    lineHeight: 28,
+      alignItems: 'center',
 
-    fontWeight: '300',
+      justifyContent:
+        'space-between',
 
-    color:
-      lightTheme.colors.textSecondary,
-  },
+      paddingHorizontal:
+        spacing.xl,
 
-  /* ========================= */
-  /* TASK */
-  /* ========================= */
+      paddingBottom:
+        spacing.lg,
+    },
 
-  taskRow: {
-    flexDirection: 'row',
+    headerContent: {
+      flex: 1,
 
-    marginBottom:
-      spacing.xxl,
-  },
+      paddingRight:
+        spacing.md,
+    },
 
-  statusCircle: {
-    width: 32,
+    headerTitle: {
+      ...typography.title,
 
-    height: 32,
+      color:
+        lightTheme.colors.text,
+    },
 
-    borderRadius: 16,
+    subtitle: {
+      ...typography.caption,
 
-    borderWidth: 1.5,
+      color:
+        lightTheme.colors.textSecondary,
 
-    borderColor:
-      lightTheme.colors.border,
+      marginTop:
+        spacing.xs,
+    },
 
-    alignItems: 'center',
 
-    justifyContent: 'center',
+    /* ================================================= */
+    /* CLOSE BUTTON                                      */
+    /* ================================================= */
 
-    marginTop: 2,
+    closeButton: {
+      width: 40,
 
-    marginRight: spacing.md,
-  },
+      height: 40,
 
-  statusCircleCompleted: {
-    backgroundColor:
-      lightTheme.colors.primary,
+      borderRadius: 20,
 
-    borderColor:
-      lightTheme.colors.primary,
-  },
+      backgroundColor:
+        lightTheme.colors.background,
 
-  checkmark: {
-    color: '#FFFFFF',
+      alignItems: 'center',
 
-    fontSize: 17,
+      justifyContent: 'center',
 
-    fontWeight: '700',
-  },
+      borderWidth: 1,
 
-  taskContent: {
-    flex: 1,
-  },
+      borderColor:
+        lightTheme.colors.border,
+    },
 
-  taskTitle: {
-    ...typography.title,
+    closeText: {
+      fontSize: 26,
 
-    color:
-      lightTheme.colors.text,
+      lineHeight: 28,
 
-    lineHeight: 25,
-  },
+      fontWeight: '300',
 
-  completedTitle: {
-    textDecorationLine:
-      'line-through',
+      color:
+        lightTheme.colors.textSecondary,
+    },
 
-    color:
-      lightTheme.colors.textMuted,
-  },
 
-  description: {
-    ...typography.body,
+    /* ================================================= */
+    /* TASK                                             */
+    /* ================================================= */
 
-    color:
-      lightTheme.colors.textSecondary,
+    taskRow: {
+      flexDirection: 'row',
 
-    lineHeight: 22,
+      paddingHorizontal:
+        spacing.xl,
 
-    marginTop: spacing.sm,
-  },
+      marginBottom:
+        spacing.xxl,
+    },
 
-  emptyDescription: {
-    ...typography.body,
+    statusCircle: {
+      width: 32,
 
-    color:
-      lightTheme.colors.textMuted,
+      height: 32,
 
-    fontStyle: 'italic',
+      borderRadius: 16,
 
-    marginTop: spacing.sm,
-  },
+      borderWidth: 1.5,
 
-  /* ========================= */
-  /* METADATA */
-  /* ========================= */
+      borderColor:
+        lightTheme.colors.border,
 
-  metadataCard: {
-    flexDirection: 'row',
+      alignItems: 'center',
 
-    backgroundColor:
-      lightTheme.colors.surface,
+      justifyContent: 'center',
 
-    borderWidth: 1,
+      marginTop: 2,
 
-    borderColor:
-      lightTheme.colors.border,
+      marginRight:
+        spacing.md,
+    },
 
-    borderRadius:
-      lightTheme.radius.lg,
+    statusCircleCompleted: {
+      backgroundColor:
+        lightTheme.colors.primary,
 
-    paddingHorizontal:
-      spacing.md,
+      borderColor:
+        lightTheme.colors.primary,
+    },
 
-    paddingVertical:
-      spacing.lg,
+    checkmark: {
+      color: '#FFFFFF',
 
-    marginBottom:
-      spacing.xxl,
-  },
+      fontSize: 17,
 
-  metadataItem: {
-    flex: 1,
+      fontWeight: '700',
+    },
 
-    minWidth: 0,
-  },
+    taskContent: {
+      flex: 1,
+    },
 
-  metadataLabel: {
-    ...typography.caption,
+    taskTitle: {
+      ...typography.title,
 
-    color:
-      lightTheme.colors.textMuted,
+      color:
+        lightTheme.colors.text,
 
-    fontWeight: '700',
+      lineHeight: 25,
+    },
 
-    letterSpacing: 0.6,
+    completedTitle: {
+      textDecorationLine:
+        'line-through',
 
-    marginBottom: spacing.xs,
-  },
+      color:
+        lightTheme.colors.textMuted,
+    },
 
-  metadataValueRow: {
-    flexDirection: 'row',
+    description: {
+      ...typography.body,
 
-    alignItems: 'center',
+      color:
+        lightTheme.colors.textSecondary,
 
-    minWidth: 0,
-  },
+      lineHeight: 22,
 
-  metadataValue: {
-    ...typography.bodyMedium,
+      marginTop:
+        spacing.sm,
+    },
 
-    color:
-      lightTheme.colors.text,
+    emptyDescription: {
+      ...typography.body,
 
-    flexShrink: 1,
-  },
+      color:
+        lightTheme.colors.textMuted,
 
-  priorityDot: {
-    width: 7,
+      fontStyle: 'italic',
 
-    height: 7,
+      marginTop:
+        spacing.sm,
+    },
 
-    borderRadius: 4,
 
-    marginRight: 6,
-  },
+    /* ================================================= */
+    /* METADATA                                          */
+    /* ================================================= */
 
-  /* ========================= */
-  /* ACTIONS */
-  /* ========================= */
+    metadataCard: {
+      flexDirection: 'row',
 
-  actions: {
-    gap: spacing.md,
-  },
+      marginHorizontal:
+        spacing.xl,
 
-  primaryButton: {
-    height: 54,
+      backgroundColor:
+        lightTheme.colors.background,
 
-    borderRadius:
-      lightTheme.radius.md,
+      borderWidth: 1,
 
-    backgroundColor:
-      lightTheme.colors.primary,
+      borderColor:
+        lightTheme.colors.border,
 
-    alignItems: 'center',
+      borderRadius:
+        lightTheme.radius.lg,
 
-    justifyContent: 'center',
-  },
+      paddingHorizontal:
+        spacing.md,
 
-  primaryButtonText: {
-    ...typography.button,
+      paddingVertical:
+        spacing.lg,
 
-    color: '#FFFFFF',
-  },
+      marginBottom:
+        spacing.xxl,
+    },
 
-  completedButton: {
-    backgroundColor:
-      lightTheme.colors.surface,
+    metadataItem: {
+      flex: 1,
 
-    borderWidth: 1,
+      minWidth: 0,
+    },
 
-    borderColor:
-      lightTheme.colors.primary,
-  },
+    metadataLabel: {
+      ...typography.caption,
 
-  completedButtonText: {
-    color:
-      lightTheme.colors.primary,
-  },
+      color:
+        lightTheme.colors.textMuted,
 
-  secondaryButton: {
-    height: 54,
+      fontWeight: '700',
 
-    borderRadius:
-      lightTheme.radius.md,
+      letterSpacing: 0.6,
 
-    backgroundColor:
-      lightTheme.colors.surface,
+      marginBottom:
+        spacing.xs,
+    },
 
-    borderWidth: 1,
+    metadataValueRow: {
+      flexDirection: 'row',
 
-    borderColor:
-      lightTheme.colors.border,
+      alignItems: 'center',
 
-    alignItems: 'center',
+      minWidth: 0,
+    },
 
-    justifyContent: 'center',
-  },
+    metadataValue: {
+      ...typography.bodyMedium,
 
-  secondaryButtonText: {
-    ...typography.button,
+      color:
+        lightTheme.colors.text,
 
-    color:
-      lightTheme.colors.text,
-  },
+      flexShrink: 1,
+    },
 
-  deleteButton: {
-    height: 46,
+    priorityDot: {
+      width: 7,
 
-    alignItems: 'center',
+      height: 7,
 
-    justifyContent: 'center',
-  },
+      borderRadius: 4,
 
-  deleteText: {
-    ...typography.bodyMedium,
+      marginRight: 6,
+    },
 
-    color:
-      lightTheme.colors.danger,
-  },
-});
+
+    /* ================================================= */
+    /* ACTIONS                                           */
+    /* ================================================= */
+
+    actions: {
+      paddingHorizontal:
+        spacing.xl,
+
+      gap:
+        spacing.md,
+    },
+
+
+    /* ================================================= */
+    /* PRIMARY BUTTON                                    */
+    /* ================================================= */
+
+    primaryButton: {
+      height: 54,
+
+      borderRadius:
+        lightTheme.radius.md,
+
+      backgroundColor:
+        lightTheme.colors.primary,
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'center',
+
+      /*
+       * Small elevation so the action
+       * feels like a primary CTA.
+       */
+      elevation: 2,
+
+      shadowColor:
+        '#000000',
+
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+
+      shadowOpacity:
+        0.10,
+
+      shadowRadius:
+        4,
+    },
+
+    primaryButtonText: {
+      ...typography.button,
+
+      color:
+        '#FFFFFF',
+    },
+
+
+    /* ================================================= */
+    /* COMPLETED BUTTON                                  */
+    /* ================================================= */
+
+    completedButton: {
+      backgroundColor:
+        lightTheme.colors.surface,
+
+      borderWidth: 1,
+
+      borderColor:
+        lightTheme.colors.primary,
+
+      elevation: 0,
+    },
+
+    completedButtonText: {
+      color:
+        lightTheme.colors.primary,
+    },
+
+
+    /* ================================================= */
+    /* SECONDARY BUTTON                                  */
+    /* ================================================= */
+
+    secondaryButton: {
+      height: 54,
+
+      borderRadius:
+        lightTheme.radius.md,
+
+      backgroundColor:
+        lightTheme.colors.surface,
+
+      borderWidth: 1,
+
+      borderColor:
+        lightTheme.colors.border,
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'center',
+    },
+
+    secondaryButtonText: {
+      ...typography.button,
+
+      color:
+        lightTheme.colors.text,
+    },
+
+
+    /* ================================================= */
+    /* DELETE                                             */
+    /* ================================================= */
+
+    deleteButton: {
+      height: 46,
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'center',
+
+      marginTop:
+        spacing.xs,
+    },
+
+    deleteText: {
+      ...typography.bodyMedium,
+
+      color:
+        lightTheme.colors.danger,
+
+      fontWeight: '600',
+    },
+
+
+    /* ================================================= */
+    /* PRESSED STATES                                    */
+    /* ================================================= */
+
+    buttonPressed: {
+      opacity: 0.82,
+
+      transform: [
+        {
+          scale: 0.99,
+        },
+      ],
+    },
+
+    deletePressed: {
+      opacity: 0.65,
+    },
+
+  });

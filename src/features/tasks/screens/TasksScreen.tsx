@@ -351,27 +351,75 @@ export function TasksScreen() {
     }, [taskStatus]);
 
 
-  /* ================================================= */
-  /* COMPLETE FROM DETAILS                             */
-  /* ================================================= */
+/* ================================================= */
+/* COMPLETE FROM DETAILS                             */
+/* ================================================= */
 
-  const handleToggleFromDetails =
-    useCallback(
-      (task: Task) => {
-        if (taskStatus === 'loading') {
-          return;
-        }
+const handleToggleFromDetails =
+  useCallback(
+    (task: Task) => {
 
-        dispatch(
-          toggleTask(task.id),
-        );
-      },
-      [
-        dispatch,
-        taskStatus,
-      ],
-    );
+      if (taskStatus === 'loading') {
+        return;
+      }
 
+
+      /*
+       * IMPORTANT:
+       *
+       * selectedTask is independent from Redux.
+       *
+       * Redux updates the task list, but the
+       * details sheet was still holding the
+       * previous task object.
+       *
+       * Update selectedTask immediately so
+       * the details sheet reflects the new
+       * status without closing/reopening it.
+       */
+      setSelectedTask(
+        previousTask => {
+
+          if (
+            !previousTask ||
+            previousTask.id !== task.id
+          ) {
+            return previousTask;
+          }
+
+
+          return {
+            ...previousTask,
+
+            status:
+              previousTask.status ===
+              'completed'
+                ? 'pending'
+                : 'completed',
+          };
+        },
+      );
+
+
+      /*
+       * Keep the existing Redux flow.
+       *
+       * This is still responsible for:
+       *
+       * - Redux state
+       * - SQLite update
+       * - offline queue
+       * - Firebase sync
+       */
+      dispatch(
+        toggleTask(task.id),
+      );
+    },
+    [
+      dispatch,
+      taskStatus,
+    ],
+  );
 
   /* ================================================= */
   /* EDIT                                              */
@@ -895,31 +943,14 @@ export function TasksScreen() {
 
   
 
-      <TaskDetailsSheet
-        visible={
-          detailsVisible
-        }
-
-        task={
-          selectedTask
-        }
-
-        onClose={
-          handleCloseDetails
-        }
-
-        onToggle={
-          handleToggleFromDetails
-        }
-
-        onEdit={
-          handleEditTask
-        }
-
-        onDelete={
-          handleDeleteRequest
-        }
-      />
+    <TaskDetailsSheet
+  visible={detailsVisible}
+  task={selectedTask}
+  onClose={handleCloseDetails}
+  onToggle={handleToggleFromDetails}
+  onEdit={handleEditTask}
+  onDelete={handleDeleteRequest}
+/>
 
 
 

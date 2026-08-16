@@ -21,6 +21,7 @@ import {
 import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
+import { Task } from '../features/tasks/types';
 
 /* ================================================= */
 /* LAZY LOADED SCREENS                               */
@@ -54,8 +55,10 @@ const LazySettingsScreen = lazy(
 const LazyTaskFormScreen = lazy(
   () =>
     import(
-      '../features/tasks/screens/TaskFormScreen'
-    ),
+      '../features/tasks/components/TaskFormSheet'
+    ).then(module => ({
+      default: module.TaskFormSheet,
+    }))
 );
 
 /* ================================================= */
@@ -69,9 +72,10 @@ export type AppTabParamList = {
 
 export type AppStackParamList = {
   MainTabs: undefined;
-  TaskForm: undefined;
+  TaskForm: {
+    task?: Task | null;
+  } | undefined;
 };
-
 /* ================================================= */
 /* NAVIGATORS                                        */
 /* ================================================= */
@@ -117,14 +121,14 @@ function TabIcon({
       style={[
         styles.iconContainer,
         focused &&
-          styles.iconContainerActive,
+        styles.iconContainerActive,
       ]}
     >
       <Text
         style={[
           styles.icon,
           focused &&
-            styles.iconActive,
+          styles.iconActive,
         ]}
       >
         {name === 'tasks'
@@ -307,21 +311,43 @@ export function AppNavigator() {
         component={MainTabs}
       />
 
-      {/* ================================================= */}
-      {/* TASK FORM                                         */}
-      {/* ================================================= */}
+{/* ============================================================ */}
+{/* TASK FORM                                                     */}
+{/* ============================================================ */}
 
-      <Stack.Screen
-        name="TaskForm"
-      >
-        {() => (
-          <Suspense
-            fallback={<ScreenLoader />}
-          >
-            <LazyTaskFormScreen />
-          </Suspense>
-        )}
-      </Stack.Screen>
+<Stack.Screen
+  name="TaskForm"
+  options={{
+    presentation: 'transparentModal',
+    animation: 'slide_from_bottom',
+    headerShown: false,
+    contentStyle: {
+      backgroundColor: 'transparent',
+    },
+  }}
+>
+  {({ navigation, route }) => (
+    <Suspense
+      fallback={
+        <View
+          style={{
+            flex: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <ActivityIndicator size="large" />
+        </View>
+      }
+    >
+      <LazyTaskFormScreen
+        visible={true}
+        task={route.params?.task}
+        onClose={() => navigation.goBack()}
+      />
+    </Suspense>
+  )}
+</Stack.Screen>
 
     </Stack.Navigator>
   );
