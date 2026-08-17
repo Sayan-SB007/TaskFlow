@@ -40,16 +40,16 @@ import {
 } from '../taskSlice';
 
 import {
-  lightTheme,
-} from '../../../theme/lightTheme';
-
-import {
   spacing,
 } from '../../../theme/spacing';
 
 import {
   typography,
 } from '../../../theme/typography';
+
+import {
+  useTheme,
+} from '../../../theme/ThemeProvider';
 
 
 /* ================================================= */
@@ -252,6 +252,13 @@ export function TaskFormSheet({
   task,
   onClose,
 }: TaskFormSheetProps) {
+
+  const {
+    theme,
+  } = useTheme();
+
+  const styles =
+    createStyles(theme);
 
   const dispatch =
     useAppDispatch();
@@ -690,7 +697,7 @@ export function TaskFormSheet({
                 name="xmark"
                 size={18}
                 color={
-                  lightTheme.colors
+                  theme.colors
                     .textSecondary
                 }
                 iconStyle="solid"
@@ -741,7 +748,7 @@ export function TaskFormSheet({
                 }}
                 placeholder="What needs to be done?"
                 placeholderTextColor={
-                  lightTheme.colors
+                  theme.colors
                     .textMuted
                 }
                 style={styles.input}
@@ -784,7 +791,7 @@ export function TaskFormSheet({
                 }
                 placeholder="Add some context..."
                 placeholderTextColor={
-                  lightTheme.colors
+                  theme.colors
                     .textMuted
                 }
                 style={[
@@ -848,6 +855,7 @@ export function TaskFormSheet({
                             {
                               backgroundColor:
                                 getPriorityColor(
+                                  theme,
                                   item,
                                 ),
                             },
@@ -944,7 +952,7 @@ export function TaskFormSheet({
                       name="calendar-days"
                       size={16}
                       color={
-                        lightTheme.colors
+                        theme.colors
                           .textMuted
                       }
                       iconStyle="solid"
@@ -1040,7 +1048,7 @@ export function TaskFormSheet({
                       name="clock"
                       size={16}
                       color={
-                        lightTheme.colors
+                        theme.colors
                           .textMuted
                       }
                       iconStyle="solid"
@@ -1258,20 +1266,22 @@ function capitalize(
 }
 
 
+type AppTheme =
+  ReturnType<typeof useTheme>['theme'];
+
 function getPriorityColor(
+  theme: AppTheme,
   priority: TaskPriority,
 ) {
-
   switch (priority) {
-
     case 'high':
-      return lightTheme.colors.danger;
+      return theme.colors.danger;
 
     case 'medium':
-      return lightTheme.colors.warning;
+      return theme.colors.warning;
 
     default:
-      return lightTheme.colors.success;
+      return theme.colors.success;
   }
 }
 
@@ -1280,7 +1290,10 @@ function getPriorityColor(
 /* STYLES                                            */
 /* ================================================= */
 
-const styles = StyleSheet.create({
+const createStyles = (
+  theme: AppTheme,
+) =>
+  StyleSheet.create({
 
   /* ================================================= */
   /* MODAL                                             */
@@ -1323,7 +1336,7 @@ sheet: {
   maxHeight: '88%',
 
   backgroundColor:
-    lightTheme.colors.surface,
+    theme.colors.surface,
 
   borderTopLeftRadius: 28,
   borderTopRightRadius: 28,
@@ -1360,7 +1373,7 @@ sheet: {
     borderRadius: 2,
 
     backgroundColor:
-      lightTheme.colors.border,
+      theme.colors.border,
 
     marginBottom:
       spacing.lg,
@@ -1397,14 +1410,14 @@ sheet: {
     ...typography.title,
 
     color:
-      lightTheme.colors.text,
+      theme.colors.text,
   },
 
   subtitle: {
     ...typography.caption,
 
     color:
-      lightTheme.colors.textSecondary,
+      theme.colors.textSecondary,
 
     marginTop:
       spacing.xs,
@@ -1423,7 +1436,7 @@ sheet: {
     borderRadius: 20,
 
     backgroundColor:
-      lightTheme.colors.background,
+      theme.colors.background,
 
     alignItems: 'center',
 
@@ -1432,7 +1445,7 @@ sheet: {
     borderWidth: 1,
 
     borderColor:
-      lightTheme.colors.border,
+      theme.colors.border,
   },
 
 
@@ -1476,7 +1489,7 @@ form: {
     ...typography.caption,
 
     color:
-      lightTheme.colors.textSecondary,
+      theme.colors.textSecondary,
 
     fontWeight: '700',
 
@@ -1495,21 +1508,21 @@ form: {
     minHeight: 52,
 
     backgroundColor:
-      lightTheme.colors.background,
+      theme.colors.background,
 
     borderWidth: 1,
 
     borderColor:
-      lightTheme.colors.border,
+      theme.colors.border,
 
     borderRadius:
-      lightTheme.radius.md,
+      theme.radius.md,
 
     paddingHorizontal:
       spacing.lg,
 
     color:
-      lightTheme.colors.text,
+      theme.colors.text,
 
     fontSize: 15,
   },
@@ -1525,7 +1538,7 @@ form: {
     ...typography.caption,
 
     color:
-      lightTheme.colors.danger,
+      theme.colors.danger,
 
     marginTop:
       spacing.xs,
@@ -1555,23 +1568,23 @@ form: {
     justifyContent: 'center',
 
     borderRadius:
-      lightTheme.radius.md,
+      theme.radius.md,
 
     borderWidth: 1,
 
     borderColor:
-      lightTheme.colors.border,
+      theme.colors.border,
 
     backgroundColor:
-      lightTheme.colors.background,
+      theme.colors.background,
   },
 
   priorityActive: {
     backgroundColor:
-      lightTheme.colors.primarySoft,
+      theme.colors.primarySoft,
 
     borderColor:
-      lightTheme.colors.primary,
+      theme.colors.primary,
   },
 
   priorityDot: {
@@ -1588,12 +1601,12 @@ form: {
     ...typography.caption,
 
     color:
-      lightTheme.colors.textSecondary,
+      theme.colors.textSecondary,
   },
 
   priorityTextActive: {
     color:
-      lightTheme.colors.primary,
+      theme.colors.primary,
 
     fontWeight: '700',
   },
@@ -1633,7 +1646,7 @@ form: {
       'space-between',
 
     backgroundColor:
-      lightTheme.colors.background,
+      theme.colors.background,
 
     borderWidth: 1,
 
@@ -1641,7 +1654,7 @@ form: {
       '#D7DCE3',
 
     borderRadius:
-      lightTheme.radius.md,
+      theme.radius.md,
 
     paddingHorizontal:
       spacing.lg,
@@ -1651,7 +1664,7 @@ form: {
     flex: 1,
 
     color:
-      lightTheme.colors.text,
+      theme.colors.text,
 
     fontSize: 15,
 
@@ -1661,7 +1674,7 @@ form: {
 
   placeholderText: {
     color:
-      lightTheme.colors.textMuted,
+      theme.colors.textMuted,
   },
 
 
@@ -1684,7 +1697,7 @@ form: {
     fontWeight: '600',
 
     color:
-      lightTheme.colors.primary,
+      theme.colors.primary,
   },
 
 
@@ -1700,15 +1713,15 @@ form: {
       'center',
 
     backgroundColor:
-      lightTheme.colors.background,
+      theme.colors.background,
 
     borderRadius:
-      lightTheme.radius.md,
+      theme.radius.md,
 
     borderWidth: 1,
 
     borderColor:
-      lightTheme.colors.border,
+      theme.colors.border,
 
     overflow:
       'hidden',
@@ -1723,7 +1736,7 @@ form: {
     fontSize: 12,
 
     color:
-      lightTheme.colors.textMuted,
+      theme.colors.textMuted,
 
     marginTop:
       spacing.sm,
@@ -1744,7 +1757,7 @@ submitFooter: {
   paddingTop: spacing.sm,
 
   backgroundColor:
-    lightTheme.colors.surface,
+    theme.colors.surface,
 
   borderTopWidth: 1,
 
@@ -1759,10 +1772,10 @@ submitFooter: {
     minHeight: 54,
 
     borderRadius:
-      lightTheme.radius.md,
+      theme.radius.md,
 
     backgroundColor:
-      lightTheme.colors.primary,
+      theme.colors.primary,
 
     alignItems:
       'center',

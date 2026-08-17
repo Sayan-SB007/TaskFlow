@@ -22,6 +22,9 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 import { Task } from '../features/tasks/types';
+import {
+  useTheme,
+} from '../theme/ThemeProvider';
 
 /* ================================================= */
 /* LAZY LOADED SCREENS                               */
@@ -90,7 +93,18 @@ const Stack =
 /* LAZY SCREEN LOADING                               */
 /* ================================================= */
 
+type AppTheme =
+  ReturnType<typeof useTheme>['theme'];
+
 function ScreenLoader() {
+
+  const {
+    theme,
+  } = useTheme();
+
+  const styles =
+    createStyles(theme);
+
   return (
     <View style={styles.loadingContainer}>
       <ActivityIndicator
@@ -116,6 +130,14 @@ function TabIcon({
   name: 'tasks' | 'settings';
   focused: boolean;
 }) {
+
+  const {
+    theme,
+  } = useTheme();
+
+  const styles =
+    createStyles(theme);
+
   return (
     <View
       style={[
@@ -144,6 +166,13 @@ function TabIcon({
 /* ================================================= */
 
 function MainTabs() {
+  const {
+    theme,
+  } = useTheme();
+
+  const styles =
+    createStyles(theme);
+
   /*
    * Get the device's actual bottom safe area.
    *
@@ -184,10 +213,10 @@ function MainTabs() {
         lazy: true,
 
         tabBarActiveTintColor:
-          '#1769E0',
+          theme.colors.primary,
 
         tabBarInactiveTintColor:
-          '#94A3B8',
+          theme.colors.textMuted,
 
         tabBarShowLabel: true,
 
@@ -206,12 +235,12 @@ function MainTabs() {
             insets.bottom + 7,
 
           backgroundColor:
-            '#FFFFFF',
+            theme.colors.surface,
 
           borderTopWidth: 1,
 
           borderTopColor:
-            '#E8ECF2',
+            theme.colors.border,
 
           elevation: 12,
 
@@ -295,6 +324,14 @@ function MainTabs() {
 /* ================================================= */
 
 export function AppNavigator() {
+
+  const {
+    theme,
+  } = useTheme();
+
+  const styles =
+    createStyles(theme);
+
   return (
     <Stack.Navigator
       screenOptions={{
@@ -311,43 +348,43 @@ export function AppNavigator() {
         component={MainTabs}
       />
 
-{/* ============================================================ */}
-{/* TASK FORM                                                     */}
-{/* ============================================================ */}
+      {/* ============================================================ */}
+      {/* TASK FORM                                                     */}
+      {/* ============================================================ */}
 
-<Stack.Screen
-  name="TaskForm"
-  options={{
-    presentation: 'transparentModal',
-    animation: 'slide_from_bottom',
-    headerShown: false,
-    contentStyle: {
-      backgroundColor: 'transparent',
-    },
-  }}
->
-  {({ navigation, route }) => (
-    <Suspense
-      fallback={
-        <View
-          style={{
-            flex: 1,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <ActivityIndicator size="large" />
-        </View>
-      }
-    >
-      <LazyTaskFormScreen
-        visible={true}
-        task={route.params?.task}
-        onClose={() => navigation.goBack()}
-      />
-    </Suspense>
-  )}
-</Stack.Screen>
+      <Stack.Screen
+        name="TaskForm"
+        options={{
+          presentation: 'transparentModal',
+          animation: 'slide_from_bottom',
+          headerShown: false,
+          contentStyle: {
+            backgroundColor: 'transparent',
+          },
+        }}
+      >
+        {({ navigation, route }) => (
+          <Suspense
+            fallback={
+              <View
+                style={{
+                  flex: 1,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <ActivityIndicator size="large" />
+              </View>
+            }
+          >
+            <LazyTaskFormScreen
+              visible={true}
+              task={route.params?.task}
+              onClose={() => navigation.goBack()}
+            />
+          </Suspense>
+        )}
+      </Stack.Screen>
 
     </Stack.Navigator>
   );
@@ -357,7 +394,10 @@ export function AppNavigator() {
 /* STYLES                                            */
 /* ================================================= */
 
-const styles = StyleSheet.create({
+const createStyles = (
+  theme: AppTheme,
+) =>
+  StyleSheet.create({
 
   /* ================================================= */
   /* LAZY LOADING                                     */
@@ -371,7 +411,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
 
     backgroundColor:
-      '#F7F8FA',
+      theme.colors.background,
   },
 
   loadingText: {
@@ -379,7 +419,7 @@ const styles = StyleSheet.create({
 
     fontSize: 13,
 
-    color: '#64748B',
+    color: theme.colors.textSecondary,
 
     fontWeight: '600',
   },
@@ -400,19 +440,19 @@ const styles = StyleSheet.create({
 
   iconContainerActive: {
     backgroundColor:
-      '#EAF2FF',
+      theme.colors.primarySoft,
   },
 
   icon: {
     fontSize: 18,
 
-    color: '#94A3B8',
+    color: theme.colors.textMuted,
 
     fontWeight: '700',
   },
 
   iconActive: {
-    color: '#1769E0',
+    color: theme.colors.primary,
   },
 
 });

@@ -69,10 +69,6 @@ import {
 } from '../components/TaskDetailsSheet';
 
 import {
-  lightTheme,
-} from '../../../theme/lightTheme';
-
-import {
   spacing,
 } from '../../../theme/spacing';
 
@@ -91,6 +87,10 @@ import {
 import {
   firebaseAuth,
 } from '../../../config/firebase';
+
+import {
+  useTheme,
+} from '../../../theme/ThemeProvider';
 
 
 /* ================================================= */
@@ -306,6 +306,14 @@ function isToday(
 /* ================================================= */
 
 export function TasksScreen() {
+
+  const {
+    theme,
+    isDark,
+  } = useTheme();
+
+  const styles =
+    createStyles(theme);
 
   const dispatch =
     useAppDispatch();
@@ -1201,7 +1209,7 @@ export function TasksScreen() {
       <StatusBar
         barStyle="dark-content"
         // backgroundColor={
-        //   lightTheme.colors.background
+        //   theme.colors.background
         // }
       />
 
@@ -1306,7 +1314,7 @@ export function TasksScreen() {
                   name="bell"
                   size={18}
                   color={
-                    lightTheme.colors.primary
+                    theme.colors.primary
                   }
                   iconStyle="solid"
                 />
@@ -1667,7 +1675,7 @@ export function TasksScreen() {
               <ActivityIndicator
                 size="large"
                 color={
-                  lightTheme.colors.primary
+                  theme.colors.primary
                 }
               />
 
@@ -1720,6 +1728,13 @@ function DeleteConfirmation({
   onConfirm,
 }: DeleteConfirmationProps) {
 
+  const {
+    theme,
+  } = useTheme();
+
+  const styles =
+    createStyles(theme);
+
   return (
     <Modal
       visible={
@@ -1755,7 +1770,7 @@ function DeleteConfirmation({
               name="trash"
               size={20}
               color={
-                lightTheme.colors.danger
+                theme.colors.danger
               }
               iconStyle="solid"
             />
@@ -1858,6 +1873,13 @@ function NotificationsSheet({
   onPress,
 }: NotificationsSheetProps) {
 
+  const {
+    theme,
+  } = useTheme();
+
+  const styles =
+    createStyles(theme);
+
   return (
     <Modal
       visible={
@@ -1934,7 +1956,7 @@ function NotificationsSheet({
                   name="bell"
                   size={17}
                   color={
-                    lightTheme.colors.primary
+                    theme.colors.primary
                   }
                   iconStyle="solid"
                 />
@@ -1980,7 +2002,7 @@ function NotificationsSheet({
                 name="xmark"
                 size={17}
                 color={
-                  lightTheme.colors.textSecondary
+                  theme.colors.textSecondary
                 }
                 iconStyle="solid"
               />
@@ -2013,7 +2035,7 @@ function NotificationsSheet({
                   name="check"
                   size={22}
                   color={
-                    lightTheme.colors.success
+                    theme.colors.success
                   }
                   iconStyle="solid"
                 />
@@ -2092,7 +2114,7 @@ function NotificationsSheet({
                       name="clock"
                       size={15}
                       color={
-                        lightTheme.colors.primary
+                        theme.colors.primary
                       }
                       iconStyle="solid"
                     />
@@ -2133,7 +2155,7 @@ function NotificationsSheet({
                     name="chevron-right"
                     size={14}
                     color={
-                      lightTheme.colors.textMuted
+                      theme.colors.textMuted
                     }
                     iconStyle="solid"
                   />
@@ -2158,7 +2180,12 @@ function NotificationsSheet({
 /* STYLES                                            */
 /* ================================================= */
 
-const styles =
+type AppTheme =
+  ReturnType<typeof useTheme>['theme'];
+
+const createStyles = (
+  theme: AppTheme,
+) =>
   StyleSheet.create({
 
     /* ================================================= */
@@ -2169,7 +2196,7 @@ const styles =
       flex: 1,
 
       backgroundColor:
-        lightTheme.colors.background,
+        theme.colors.background,
 
       paddingTop:
         Platform.OS === 'android'
@@ -2224,7 +2251,7 @@ const styles =
       ...typography.body,
 
       color:
-        lightTheme.colors.textSecondary,
+        theme.colors.textSecondary,
     },
 
 
@@ -2232,7 +2259,7 @@ const styles =
       ...typography.display,
 
       color:
-        lightTheme.colors.text,
+        theme.colors.text,
 
       marginTop: 2,
     },
@@ -2246,12 +2273,12 @@ const styles =
       borderRadius: 15,
 
       backgroundColor:
-        lightTheme.colors.surface,
+        theme.colors.surface,
 
       borderWidth: 1,
 
       borderColor:
-        lightTheme.colors.border,
+        theme.colors.border,
 
       alignItems:
         'center',
@@ -2280,7 +2307,7 @@ const styles =
       paddingHorizontal: 3,
 
       backgroundColor:
-        lightTheme.colors.danger,
+        theme.colors.danger,
 
       alignItems:
         'center',
@@ -2291,7 +2318,7 @@ const styles =
       borderWidth: 1,
 
       borderColor:
-        lightTheme.colors.surface,
+        theme.colors.surface,
     },
 
 
@@ -2332,7 +2359,7 @@ const styles =
       ...typography.title,
 
       color:
-        lightTheme.colors.text,
+        theme.colors.text,
     },
 
 
@@ -2340,7 +2367,7 @@ const styles =
       ...typography.bodyMedium,
 
       color:
-        lightTheme.colors.primary,
+        theme.colors.primary,
     },
 
 
@@ -2374,7 +2401,7 @@ const styles =
 
     filterActive: {
       backgroundColor:
-        lightTheme.colors.primarySoft,
+        theme.colors.primarySoft,
     },
 
 
@@ -2382,13 +2409,13 @@ const styles =
       ...typography.caption,
 
       color:
-        lightTheme.colors.textSecondary,
+        theme.colors.textSecondary,
     },
 
 
     filterTextActive: {
       color:
-        lightTheme.colors.primary,
+        theme.colors.primary,
 
       fontWeight:
         '700',
@@ -2436,7 +2463,7 @@ const styles =
         'center',
 
       backgroundColor:
-        lightTheme.colors.successSoft,
+        theme.colors.successSoft,
     },
 
 
@@ -2444,7 +2471,7 @@ const styles =
       fontSize: 26,
 
       color:
-        lightTheme.colors.success,
+        theme.colors.success,
 
       fontWeight:
         '700',
@@ -2455,7 +2482,7 @@ const styles =
       ...typography.title,
 
       color:
-        lightTheme.colors.text,
+        theme.colors.text,
 
       marginTop:
         spacing.lg,
@@ -2466,7 +2493,7 @@ const styles =
       ...typography.body,
 
       color:
-        lightTheme.colors.textSecondary,
+        theme.colors.textSecondary,
 
       textAlign:
         'center',
@@ -2487,10 +2514,10 @@ const styles =
         spacing.xl,
 
       borderRadius:
-        lightTheme.radius.md,
+        theme.radius.md,
 
       backgroundColor:
-        lightTheme.colors.primary,
+        theme.colors.primary,
 
       alignItems:
         'center',
@@ -2531,7 +2558,7 @@ const styles =
       borderRadius: 18,
 
       backgroundColor:
-        lightTheme.colors.primary,
+        theme.colors.primary,
 
       alignItems:
         'center',
@@ -2613,7 +2640,7 @@ const styles =
         '100%',
 
       backgroundColor:
-        lightTheme.colors.surface,
+        theme.colors.surface,
 
       borderRadius:
         24,
@@ -2649,7 +2676,7 @@ const styles =
       borderRadius: 23,
 
       backgroundColor:
-        lightTheme.colors.dangerSoft,
+        theme.colors.dangerSoft,
 
       alignItems:
         'center',
@@ -2666,7 +2693,7 @@ const styles =
       ...typography.title,
 
       color:
-        lightTheme.colors.text,
+        theme.colors.text,
     },
 
 
@@ -2674,7 +2701,7 @@ const styles =
       ...typography.body,
 
       color:
-        lightTheme.colors.textSecondary,
+        theme.colors.textSecondary,
 
       lineHeight:
         22,
@@ -2702,12 +2729,12 @@ const styles =
       height: 50,
 
       borderRadius:
-        lightTheme.radius.md,
+        theme.radius.md,
 
       borderWidth: 1,
 
       borderColor:
-        lightTheme.colors.border,
+        theme.colors.border,
 
       alignItems:
         'center',
@@ -2721,7 +2748,7 @@ const styles =
       ...typography.button,
 
       color:
-        lightTheme.colors.text,
+        theme.colors.text,
     },
 
 
@@ -2731,10 +2758,10 @@ const styles =
       height: 50,
 
       borderRadius:
-        lightTheme.radius.md,
+        theme.radius.md,
 
       backgroundColor:
-        lightTheme.colors.danger,
+        theme.colors.danger,
 
       alignItems:
         'center',
@@ -2781,7 +2808,7 @@ const styles =
         300,
 
       backgroundColor:
-        lightTheme.colors.surface,
+        theme.colors.surface,
 
       borderRadius:
         24,
@@ -2816,7 +2843,7 @@ const styles =
       ...typography.title,
 
       color:
-        lightTheme.colors.text,
+        theme.colors.text,
 
       marginTop:
         spacing.lg,
@@ -2827,7 +2854,7 @@ const styles =
       ...typography.body,
 
       color:
-        lightTheme.colors.textSecondary,
+        theme.colors.textSecondary,
 
       marginTop:
         spacing.xs,
@@ -2883,7 +2910,7 @@ const styles =
         '78%',
 
       backgroundColor:
-        lightTheme.colors.surface,
+        theme.colors.surface,
 
       borderTopLeftRadius:
         28,
@@ -2931,7 +2958,7 @@ const styles =
         2,
 
       backgroundColor:
-        lightTheme.colors.border,
+        theme.colors.border,
 
       marginBottom:
         spacing.lg,
@@ -2978,7 +3005,7 @@ const styles =
         14,
 
       backgroundColor:
-        lightTheme.colors.primarySoft,
+        theme.colors.primarySoft,
 
       alignItems:
         'center',
@@ -2995,7 +3022,7 @@ const styles =
       ...typography.title,
 
       color:
-        lightTheme.colors.text,
+        theme.colors.text,
     },
 
 
@@ -3003,7 +3030,7 @@ const styles =
       ...typography.caption,
 
       color:
-        lightTheme.colors.textSecondary,
+        theme.colors.textSecondary,
 
       marginTop:
         spacing.xs,
@@ -3021,13 +3048,13 @@ const styles =
         20,
 
       backgroundColor:
-        lightTheme.colors.background,
+        theme.colors.background,
 
       borderWidth:
         1,
 
       borderColor:
-        lightTheme.colors.border,
+        theme.colors.border,
 
       alignItems:
         'center',
@@ -3063,7 +3090,7 @@ const styles =
         28,
 
       backgroundColor:
-        lightTheme.colors.successSoft,
+        theme.colors.successSoft,
 
       alignItems:
         'center',
@@ -3080,7 +3107,7 @@ const styles =
       ...typography.title,
 
       color:
-        lightTheme.colors.text,
+        theme.colors.text,
 
       textAlign:
         'center',
@@ -3091,7 +3118,7 @@ const styles =
       ...typography.body,
 
       color:
-        lightTheme.colors.textSecondary,
+        theme.colors.textSecondary,
 
       textAlign:
         'center',
@@ -3124,16 +3151,16 @@ const styles =
         spacing.md,
 
       borderRadius:
-        lightTheme.radius.md,
+        theme.radius.md,
 
       backgroundColor:
-        lightTheme.colors.background,
+        theme.colors.background,
 
       borderWidth:
         1,
 
       borderColor:
-        lightTheme.colors.border,
+        theme.colors.border,
 
       marginBottom:
         spacing.sm,
@@ -3151,7 +3178,7 @@ const styles =
         12,
 
       backgroundColor:
-        lightTheme.colors.primarySoft,
+        theme.colors.primarySoft,
 
       alignItems:
         'center',
@@ -3173,7 +3200,7 @@ const styles =
       ...typography.bodyMedium,
 
       color:
-        lightTheme.colors.text,
+        theme.colors.text,
 
       fontWeight:
         '600',
@@ -3184,7 +3211,7 @@ const styles =
       ...typography.caption,
 
       color:
-        lightTheme.colors.textSecondary,
+        theme.colors.textSecondary,
 
       marginTop:
         2,

@@ -20,8 +20,8 @@ import type {
 } from '../types';
 
 import {
-  lightTheme,
-} from '../../../theme/lightTheme';
+  useTheme,
+} from '../../../theme/ThemeProvider';
 
 import {
   spacing,
@@ -61,6 +61,13 @@ export function TaskDetailsSheet({
 
   const insets =
     useSafeAreaInsets();
+
+  const {
+    theme,
+  } = useTheme();
+
+  const styles =
+    createStyles(theme);
 
 
   /*
@@ -205,7 +212,7 @@ export function TaskDetailsSheet({
                 name="xmark"
                 size={18}
                 color={
-                  lightTheme.colors
+                  theme.colors
                     .textSecondary
                 }
                 iconStyle="solid"
@@ -318,6 +325,7 @@ export function TaskDetailsSheet({
                 task.dueDate ||
                 'Not set'
               }
+              theme={theme}
             />
 
 
@@ -327,6 +335,7 @@ export function TaskDetailsSheet({
                 task.dueTime ||
                 'Not set'
               }
+              theme={theme}
             />
 
 
@@ -340,6 +349,7 @@ export function TaskDetailsSheet({
               priority={
                 task.priority
               }
+              theme={theme}
             />
 
           </View>
@@ -464,7 +474,7 @@ export function TaskDetailsSheet({
                 name="trash"
                 size={14}
                 color={
-                  lightTheme.colors.danger
+                  theme.colors.danger
                 }
                 iconStyle="solid"
               />
@@ -498,6 +508,7 @@ interface MetadataItemProps {
   label: string;
   value: string;
   priority?: Task['priority'];
+  theme: ReturnType<typeof useTheme>['theme'];
 }
 
 
@@ -505,7 +516,11 @@ function MetadataItem({
   label,
   value,
   priority,
+  theme,
 }: MetadataItemProps) {
+
+  const styles =
+    createStyles(theme);
 
   return (
     <View
@@ -540,6 +555,7 @@ function MetadataItem({
               {
                 backgroundColor:
                   getPriorityColor(
+                    theme,
                     priority,
                   ),
               },
@@ -590,6 +606,7 @@ function capitalize(
 
 
 function getPriorityColor(
+  theme: ReturnType<typeof useTheme>['theme'],
   priority: Task['priority'],
 ) {
 
@@ -598,14 +615,14 @@ function getPriorityColor(
   ) {
 
     case 'high':
-      return lightTheme.colors.danger;
+      return theme.colors.danger;
 
     case 'medium':
-      return lightTheme.colors.warning;
+      return theme.colors.warning;
 
     case 'low':
     default:
-      return lightTheme.colors.success;
+      return theme.colors.success;
   }
 }
 
@@ -614,7 +631,9 @@ function getPriorityColor(
 /* STYLES                                            */
 /* ================================================= */
 
-const styles =
+const createStyles = (
+  theme: ReturnType<typeof useTheme>['theme'],
+) =>
   StyleSheet.create({
 
     /* ================================================= */
@@ -633,7 +652,7 @@ const styles =
        * makes the sheet clearly appear above the task list.
        */
       backgroundColor:
-        'rgba(15,18,25,0.52)',
+        theme.colors.overlay,
     },
 
 
@@ -665,7 +684,7 @@ const styles =
         '88%',
 
       backgroundColor:
-        lightTheme.colors.surface,
+        theme.colors.surface,
 
       borderTopLeftRadius:
         28,
@@ -718,7 +737,7 @@ const styles =
         2,
 
       backgroundColor:
-        lightTheme.colors.border,
+        theme.colors.border,
 
       marginBottom:
         spacing.lg,
@@ -759,7 +778,7 @@ const styles =
       ...typography.title,
 
       color:
-        lightTheme.colors.text,
+        theme.colors.text,
     },
 
 
@@ -767,7 +786,7 @@ const styles =
       ...typography.caption,
 
       color:
-        lightTheme.colors.textSecondary,
+        theme.colors.textSecondary,
 
       marginTop:
         spacing.xs,
@@ -785,7 +804,7 @@ const styles =
         20,
 
       backgroundColor:
-        lightTheme.colors.background,
+        theme.colors.background,
 
       alignItems:
         'center',
@@ -797,7 +816,7 @@ const styles =
         1,
 
       borderColor:
-        lightTheme.colors.border,
+        theme.colors.border,
     },
 
 
@@ -831,7 +850,7 @@ const styles =
         1.5,
 
       borderColor:
-        lightTheme.colors.border,
+        theme.colors.border,
 
       alignItems:
         'center',
@@ -849,10 +868,10 @@ const styles =
 
     statusCircleCompleted: {
       backgroundColor:
-        lightTheme.colors.primary,
+        theme.colors.primary,
 
       borderColor:
-        lightTheme.colors.primary,
+        theme.colors.primary,
     },
 
 
@@ -867,7 +886,7 @@ const styles =
       ...typography.title,
 
       color:
-        lightTheme.colors.text,
+        theme.colors.text,
 
       lineHeight:
         25,
@@ -879,7 +898,7 @@ const styles =
         'line-through',
 
       color:
-        lightTheme.colors.textMuted,
+        theme.colors.textMuted,
     },
 
 
@@ -887,7 +906,7 @@ const styles =
       ...typography.body,
 
       color:
-        lightTheme.colors.textSecondary,
+        theme.colors.textSecondary,
 
       lineHeight:
         22,
@@ -901,7 +920,7 @@ const styles =
       ...typography.body,
 
       color:
-        lightTheme.colors.textMuted,
+        theme.colors.textMuted,
 
       fontStyle:
         'italic',
@@ -923,16 +942,16 @@ const styles =
         spacing.xl,
 
       backgroundColor:
-        lightTheme.colors.background,
+        theme.colors.background,
 
       borderWidth:
         1,
 
       borderColor:
-        lightTheme.colors.border,
+        theme.colors.border,
 
       borderRadius:
-        lightTheme.radius.lg,
+        theme.radius.lg,
 
       paddingHorizontal:
         spacing.md,
@@ -957,7 +976,7 @@ const styles =
       ...typography.caption,
 
       color:
-        lightTheme.colors.textMuted,
+        theme.colors.textMuted,
 
       fontWeight:
         '700',
@@ -986,7 +1005,7 @@ const styles =
       ...typography.bodyMedium,
 
       color:
-        lightTheme.colors.text,
+        theme.colors.text,
 
       flexShrink:
         1,
@@ -1026,10 +1045,10 @@ const styles =
         54,
 
       borderRadius:
-        lightTheme.radius.md,
+        theme.radius.md,
 
       backgroundColor:
-        lightTheme.colors.primary,
+        theme.colors.primary,
 
       alignItems:
         'center',
@@ -1052,13 +1071,13 @@ const styles =
 
     completedButton: {
       backgroundColor:
-        lightTheme.colors.surface,
+        theme.colors.surface,
 
       borderWidth:
         1,
 
       borderColor:
-        lightTheme.colors.primary,
+        theme.colors.primary,
 
       elevation:
         0,
@@ -1067,7 +1086,7 @@ const styles =
 
     completedButtonText: {
       color:
-        lightTheme.colors.primary,
+        theme.colors.primary,
     },
 
 
@@ -1076,16 +1095,16 @@ const styles =
         54,
 
       borderRadius:
-        lightTheme.radius.md,
+        theme.radius.md,
 
       backgroundColor:
-        lightTheme.colors.surface,
+        theme.colors.surface,
 
       borderWidth:
         1,
 
       borderColor:
-        lightTheme.colors.border,
+        theme.colors.border,
 
       alignItems:
         'center',
@@ -1099,7 +1118,7 @@ const styles =
       ...typography.button,
 
       color:
-        lightTheme.colors.text,
+        theme.colors.text,
     },
 
 
@@ -1128,7 +1147,7 @@ const styles =
       ...typography.bodyMedium,
 
       color:
-        lightTheme.colors.danger,
+        theme.colors.danger,
 
       fontWeight:
         '600',

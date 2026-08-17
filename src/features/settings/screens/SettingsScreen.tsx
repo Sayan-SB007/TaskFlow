@@ -1,4 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, {
+  useMemo,
+  useState,
+} from 'react';
 
 import {
   ActivityIndicator,
@@ -10,45 +13,83 @@ import {
   View,
 } from 'react-native';
 
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {SafeAreaView} from 'react-native-safe-area-context';
 
-import { signOut } from 'firebase/auth';
+import {signOut} from 'firebase/auth';
 
-import { firebaseAuth } from '../../../config/firebase';
-import { openNotificationSettings } from '../../notifications/notificationService';
+import {firebaseAuth} from '../../../config/firebase';
+
+import {
+  openNotificationSettings,
+} from '../../notifications/notificationService';
+
 import notifee, {
   AuthorizationStatus,
 } from '@notifee/react-native';
-export function SettingsScreen() {
-  const [loggingOut, setLoggingOut] = useState(false);
 
-  const user = firebaseAuth.currentUser;
-console.log('========== FIRESTORE SYNC AUTH ==========');
-console.log('Firebase UID:', user?.uid);
-console.log('Firebase Email:', user?.email);
-console.log('Is authenticated:', !!user);
-console.log('==========================================');
+import FontAwesome6 from '@react-native-vector-icons/fontawesome6/static';
+
+import {
+  useTheme,
+} from '../../../theme/ThemeProvider';
+
+
+export function SettingsScreen() {
+
+  /* ================================================= */
+  /* THEME                                             */
+  /* ================================================= */
+
+  const {
+    theme,
+    mode,
+    setMode,
+    isDark,
+  } = useTheme();
+
+
+  /* ================================================= */
+  /* LOCAL STATE                                       */
+  /* ================================================= */
+
+  const [loggingOut, setLoggingOut] =
+    useState(false);
+
+
+  /* ================================================= */
+  /* USER                                             */
+  /* ================================================= */
+
+  const user =
+    firebaseAuth.currentUser;
+
 
   const displayName =
     user?.displayName?.trim() ||
     'User';
 
+
   const email =
     user?.email || '';
+
 
   /* ================================================= */
   /* INITIALS                                          */
   /* ================================================= */
 
   const initials = useMemo(() => {
-    const parts = displayName
-      .trim()
-      .split(/\s+/)
-      .filter(Boolean);
+
+    const parts =
+      displayName
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+
 
     if (parts.length === 0) {
       return 'U';
     }
+
 
     if (parts.length === 1) {
       return parts[0]
@@ -56,20 +97,25 @@ console.log('==========================================');
         .toUpperCase();
     }
 
+
     return (
       parts[0].charAt(0) +
       parts[parts.length - 1].charAt(0)
     ).toUpperCase();
+
   }, [displayName]);
+
 
   /* ================================================= */
   /* LOGOUT                                            */
   /* ================================================= */
 
   const handleLogout = () => {
+
     if (loggingOut) {
       return;
     }
+
 
     Alert.alert(
       'Log out',
@@ -79,6 +125,7 @@ console.log('==========================================');
           text: 'Cancel',
           style: 'cancel',
         },
+
         {
           text: 'Log out',
           style: 'destructive',
@@ -88,97 +135,143 @@ console.log('==========================================');
     );
   };
 
+
   const performLogout = async () => {
+
     try {
+
       setLoggingOut(true);
 
       await signOut(firebaseAuth);
 
       /*
-       * DO NOT navigate manually.
-       *
-       * Firebase auth state becomes null.
-       * RootNavigator should detect that and
-       * automatically show LoginScreen.
+       * Do not navigate manually.
+       * RootNavigator handles auth state.
        */
+
     } catch (error) {
+
       console.error(
         'LOGOUT ERROR:',
         error,
       );
 
+
       Alert.alert(
         'Logout failed',
         'Unable to log out right now. Please try again.',
       );
+
     } finally {
+
       setLoggingOut(false);
+
     }
   };
 
+
   /* ================================================= */
-/* NOTIFICATION SETTINGS                             */
-/* ================================================= */
+  /* NOTIFICATION SETTINGS                             */
+  /* ================================================= */
 
-const handleNotificationSettings = async () => {
+  const handleNotificationSettings =
+    async () => {
 
-  try {
+      try {
 
-    const settings =
-      await notifee.getNotificationSettings();
-
-
-    const notificationsEnabled =
-      settings.authorizationStatus ===
-      AuthorizationStatus.AUTHORIZED;
+        const settings =
+          await notifee.getNotificationSettings();
 
 
-    Alert.alert(
-      'Notifications',
+        const notificationsEnabled =
+          settings.authorizationStatus ===
+          AuthorizationStatus.AUTHORIZED;
 
-      notificationsEnabled
-        ? 'Task reminders are enabled.'
-        : 'TaskFlow notifications are currently disabled.',
 
+        Alert.alert(
+          'Notifications',
+
+          notificationsEnabled
+            ? 'Task reminders are enabled.'
+            : 'TaskFlow notifications are currently disabled.',
+
+          [
+            {
+              text: 'Cancel',
+              style: 'cancel',
+            },
+
+            {
+              text: 'Open settings',
+
+              onPress: () => {
+                void openNotificationSettings();
+              },
+            },
+          ],
+        );
+
+      } catch (error) {
+
+        console.warn(
+          'NOTIFICATION SETTINGS ERROR:',
+          error,
+        );
+
+
+        Alert.alert(
+          'Notifications',
+          'Unable to read notification settings.',
+        );
+
+      }
+    };
+
+
+  /* ================================================= */
+  /* THEME TOGGLE                                      */
+  /* ================================================= */
+
+  const toggleTheme = () => {
+
+    setMode(
+      mode === 'dark'
+        ? 'light'
+        : 'dark',
+    );
+
+  };
+
+
+  /* ================================================= */
+  /* DYNAMIC STYLES                                    */
+  /* ================================================= */
+
+  const styles =
+    useMemo(
+      () =>
+        createStyles(
+          theme,
+          isDark,
+        ),
       [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-
-        {
-          text: 'Open settings',
-
-          onPress: () => {
-            void openNotificationSettings();
-          },
-        },
+        theme,
+        isDark,
       ],
     );
 
-  } catch (error) {
-
-    console.warn(
-      'NOTIFICATION SETTINGS ERROR:',
-      error,
-    );
-
-    Alert.alert(
-      'Notifications',
-      'Unable to read notification settings.',
-    );
-  }
-};
 
   /* ================================================= */
   /* UI                                                */
   /* ================================================= */
 
   return (
+
     <SafeAreaView
       style={styles.safeArea}
       edges={['top', 'bottom']}
     >
+
       <ScrollView
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
@@ -191,17 +284,16 @@ const handleNotificationSettings = async () => {
 
         <View style={styles.header}>
 
-          <View>
-            <Text style={styles.title}>
-              Settings
-            </Text>
+          <Text style={styles.title}>
+            Settings
+          </Text>
 
-            <Text style={styles.subtitle}>
-              Manage your account and preferences.
-            </Text>
-          </View>
+          <Text style={styles.subtitle}>
+            Manage your account and preferences.
+          </Text>
 
         </View>
+
 
         {/* ================================================= */}
         {/* PROFILE CARD                                       */}
@@ -210,10 +302,13 @@ const handleNotificationSettings = async () => {
         <View style={styles.profileCard}>
 
           <View style={styles.avatar}>
+
             <Text style={styles.avatarText}>
               {initials}
             </Text>
+
           </View>
+
 
           <View style={styles.profileInfo}>
 
@@ -223,6 +318,7 @@ const handleNotificationSettings = async () => {
             >
               {displayName}
             </Text>
+
 
             <Text
               style={styles.profileEmail}
@@ -235,6 +331,7 @@ const handleNotificationSettings = async () => {
 
         </View>
 
+
         {/* ================================================= */}
         {/* ACCOUNT                                            */}
         {/* ================================================= */}
@@ -243,15 +340,24 @@ const handleNotificationSettings = async () => {
           Account
         </Text>
 
+
         <View style={styles.sectionCard}>
+
+          {/* FULL NAME */}
 
           <View style={styles.settingRow}>
 
             <View style={styles.settingIcon}>
-              <Text style={styles.settingIconText}>
-                👤
-              </Text>
+
+              <FontAwesome6
+                name="user"
+                size={16}
+                color={theme.colors.primary}
+                iconStyle="solid"
+              />
+
             </View>
+
 
             <View style={styles.settingContent}>
 
@@ -267,15 +373,25 @@ const handleNotificationSettings = async () => {
 
           </View>
 
+
           <View style={styles.separator} />
+
+
+          {/* EMAIL */}
 
           <View style={styles.settingRow}>
 
             <View style={styles.settingIcon}>
-              <Text style={styles.settingIconText}>
-                @
-              </Text>
+
+              <FontAwesome6
+                name="at"
+                size={16}
+                color={theme.colors.primary}
+                iconStyle="solid"
+              />
+
             </View>
+
 
             <View style={styles.settingContent}>
 
@@ -296,6 +412,7 @@ const handleNotificationSettings = async () => {
 
         </View>
 
+
         {/* ================================================= */}
         {/* PREFERENCES                                        */}
         {/* ================================================= */}
@@ -304,61 +421,84 @@ const handleNotificationSettings = async () => {
           Preferences
         </Text>
 
+
         <View style={styles.sectionCard}>
 
-          {/* ================= NOTIFICATIONS ================= */}
-
-     <Pressable
-  style={({pressed}) => [
-    styles.settingRow,
-    pressed && styles.settingPressed,
-  ]}
-  onPress={() => {
-    void handleNotificationSettings();
-  }}
->
-  <View style={styles.settingIcon}>
-    <Text style={styles.settingIconText}>
-      🔔
-    </Text>
-  </View>
-
-  <View style={styles.settingContent}>
-    <Text style={styles.settingTitle}>
-      Notifications
-    </Text>
-
-    <Text style={styles.settingValue}>
-      Manage task reminders
-    </Text>
-  </View>
-
-  <Text style={styles.chevron}>
-    ›
-  </Text>
-</Pressable>
-          <View style={styles.separator} />
-
-          {/* ================= APPEARANCE ================= */}
+          {/* ================================================= */}
+          {/* NOTIFICATIONS                                      */}
+          {/* ================================================= */}
 
           <Pressable
-            style={({ pressed }) => [
+            style={({pressed}) => [
               styles.settingRow,
-              pressed && styles.settingPressed,
+
+              pressed &&
+                styles.settingPressed,
             ]}
             onPress={() => {
-              Alert.alert(
-                'Appearance',
-                'Theme settings will be available soon.',
-              );
+              void handleNotificationSettings();
             }}
           >
 
             <View style={styles.settingIcon}>
-              <Text style={styles.settingIconText}>
-                ◐
-              </Text>
+
+              <FontAwesome6
+                name="bell"
+                size={16}
+                color={theme.colors.primary}
+                iconStyle="solid"
+              />
+
             </View>
+
+
+            <View style={styles.settingContent}>
+
+              <Text style={styles.settingTitle}>
+                Notifications
+              </Text>
+
+              <Text style={styles.settingValue}>
+                Manage task reminders
+              </Text>
+
+            </View>
+
+
+            <FontAwesome6
+              name="chevron-right"
+              size={14}
+              color={theme.colors.textMuted}
+              iconStyle="solid"
+            />
+
+          </Pressable>
+
+
+          <View style={styles.separator} />
+
+
+          {/* ================================================= */}
+          {/* APPEARANCE                                        */}
+          {/* ================================================= */}
+
+          <View style={styles.settingRow}>
+
+            <View style={styles.settingIcon}>
+
+              <FontAwesome6
+                name={
+                  isDark
+                    ? 'moon'
+                    : 'sun'
+                }
+                size={17}
+                color={theme.colors.primary}
+                iconStyle="solid"
+              />
+
+            </View>
+
 
             <View style={styles.settingContent}>
 
@@ -367,18 +507,65 @@ const handleNotificationSettings = async () => {
               </Text>
 
               <Text style={styles.settingValue}>
-                Light theme
+                {isDark
+                  ? 'Dark theme'
+                  : 'Light theme'}
               </Text>
 
             </View>
 
-            <Text style={styles.chevron}>
-              ›
-            </Text>
 
-          </Pressable>
+            {/* ============================================= */}
+            {/* THEME TOGGLE                                    */}
+            {/* ============================================= */}
+
+            <Pressable
+              accessibilityRole="switch"
+              accessibilityLabel="Toggle dark mode"
+              accessibilityState={{
+                checked: isDark,
+              }}
+              onPress={toggleTheme}
+              style={[
+                styles.themeToggle,
+
+                isDark &&
+                  styles.themeToggleActive,
+              ]}
+            >
+
+              <View
+                style={[
+                  styles.themeToggleThumb,
+
+                  isDark &&
+                    styles.themeToggleThumbActive,
+                ]}
+              >
+
+                <FontAwesome6
+                  name={
+                    isDark
+                      ? 'moon'
+                      : 'sun'
+                  }
+                  size={13}
+                  color={
+                    isDark
+                      ? theme.colors.primary
+                      : '#F59E0B'
+                  }
+                  iconStyle="solid"
+                />
+
+              </View>
+
+            </Pressable>
+
+          </View>
 
         </View>
+
 
         {/* ================================================= */}
         {/* LOGOUT                                             */}
@@ -388,29 +575,37 @@ const handleNotificationSettings = async () => {
           Account actions
         </Text>
 
+
         <View style={styles.sectionCard}>
 
           <Pressable
             onPress={handleLogout}
             disabled={loggingOut}
-            style={({ pressed }) => [
+
+            style={({pressed}) => [
+
               styles.logoutRow,
 
               pressed &&
-              styles.logoutPressed,
+                styles.logoutPressed,
 
               loggingOut &&
-              styles.logoutDisabled,
+                styles.logoutDisabled,
+
             ]}
           >
 
             <View style={styles.logoutIcon}>
 
-              <Text style={styles.logoutIconText}>
-                ↪
-              </Text>
+              <FontAwesome6
+                name="right-from-bracket"
+                size={16}
+                color={theme.colors.danger}
+                iconStyle="solid"
+              />
 
             </View>
+
 
             <View style={styles.settingContent}>
 
@@ -424,20 +619,29 @@ const handleNotificationSettings = async () => {
 
             </View>
 
+
             {loggingOut ? (
+
               <ActivityIndicator
                 size="small"
-                color="#DC2626"
+                color={theme.colors.danger}
               />
+
             ) : (
-              <Text style={styles.logoutChevron}>
-                ›
-              </Text>
+
+              <FontAwesome6
+                name="chevron-right"
+                size={14}
+                color={theme.colors.danger}
+                iconStyle="solid"
+              />
+
             )}
 
           </Pressable>
 
         </View>
+
 
         {/* ================================================= */}
         {/* FOOTER                                             */}
@@ -456,353 +660,493 @@ const handleNotificationSettings = async () => {
         </View>
 
       </ScrollView>
+
     </SafeAreaView>
   );
 }
 
+
 /* ================================================= */
-/* STYLES                                            */
+/* DYNAMIC STYLES                                    */
 /* ================================================= */
 
-const styles = StyleSheet.create({
+function createStyles(
+  theme: any,
+  isDark: boolean,
+) {
 
-  /* ================================================= */
-  /* SCREEN                                            */
-  /* ================================================= */
+  const colors =
+    theme.colors;
 
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F4F7FC',
-  },
 
-  scroll: {
-    flex: 1,
-  },
+  return StyleSheet.create({
 
-  content: {
-    paddingHorizontal: 20,
+    /* ================================================= */
+    /* SCREEN                                            */
+    /* ================================================= */
 
-    /*
-     * Small bottom spacing only.
-     *
-     * Do NOT use useBottomTabBarHeight() here.
-     * The tab navigator already owns the bottom
-     * tab-bar area.
-     */
-    paddingBottom: 24,
-  },
+    safeArea: {
+      flex: 1,
 
-  /* ================================================= */
-  /* HEADER                                            */
-  /* ================================================= */
-
-  header: {
-    paddingTop: 16,
-    paddingBottom: 24,
-  },
-
-  title: {
-    fontSize: 30,
-    lineHeight: 36,
-    fontWeight: '800',
-    color: '#111827',
-    letterSpacing: -0.5,
-  },
-
-  subtitle: {
-    marginTop: 6,
-    fontSize: 14,
-    lineHeight: 21,
-    color: '#6B7280',
-  },
-
-  /* ================================================= */
-  /* PROFILE                                            */
-  /* ================================================= */
-
-  profileCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-
-    backgroundColor: '#1769E0',
-
-    borderRadius: 18,
-
-    padding: 18,
-
-    marginBottom: 28,
-
-    shadowColor: '#1769E0',
-
-    shadowOffset: {
-      width: 0,
-      height: 7,
+      backgroundColor:
+        colors.background,
     },
 
-    shadowOpacity: 0.18,
 
-    shadowRadius: 14,
-
-    elevation: 5,
-  },
-
-  avatar: {
-    width: 58,
-    height: 58,
-
-    borderRadius: 29,
-
-    backgroundColor: '#FFFFFF',
-
-    alignItems: 'center',
-    justifyContent: 'center',
-
-    marginRight: 14,
-  },
-
-  avatarText: {
-    fontSize: 19,
-
-    fontWeight: '800',
-
-    color: '#1769E0',
-  },
-
-  profileInfo: {
-    flex: 1,
-  },
-
-  profileName: {
-    fontSize: 18,
-
-    fontWeight: '800',
-
-    color: '#FFFFFF',
-
-    marginBottom: 4,
-  },
-
-  profileEmail: {
-    fontSize: 13,
-
-    color: 'rgba(255,255,255,0.78)',
-  },
-
-  /* ================================================= */
-  /* SECTIONS                                           */
-  /* ================================================= */
-
-  sectionTitle: {
-    fontSize: 13,
-
-    fontWeight: '800',
-
-    color: '#6B7280',
-
-    marginBottom: 9,
-
-    marginLeft: 4,
-
-    textTransform: 'uppercase',
-
-    letterSpacing: 0.7,
-  },
-
-  sectionCard: {
-    backgroundColor: '#FFFFFF',
-
-    borderRadius: 16,
-
-    overflow: 'hidden',
-
-    marginBottom: 24,
-
-    shadowColor: '#000000',
-
-    shadowOffset: {
-      width: 0,
-      height: 3,
+    scroll: {
+      flex: 1,
     },
 
-    shadowOpacity: 0.04,
 
-    shadowRadius: 10,
+    content: {
+      paddingHorizontal: 20,
 
-    elevation: 2,
-  },
+      paddingBottom: 24,
+    },
 
-  /* ================================================= */
-  /* SETTING ROW                                        */
-  /* ================================================= */
 
-  settingRow: {
-    minHeight: 70,
+    /* ================================================= */
+    /* HEADER                                            */
+    /* ================================================= */
 
-    flexDirection: 'row',
+    header: {
+      paddingTop: 16,
 
-    alignItems: 'center',
+      paddingBottom: 24,
+    },
 
-    paddingHorizontal: 16,
 
-    paddingVertical: 12,
-  },
+    title: {
+      fontSize: 30,
 
-  settingPressed: {
-    backgroundColor: '#F8FAFC',
-  },
+      lineHeight: 36,
 
-  settingIcon: {
-    width: 40,
-    height: 40,
+      fontWeight: '800',
 
-    borderRadius: 12,
+      color:
+        colors.text,
 
-    backgroundColor: '#F1F5F9',
+      letterSpacing: -0.5,
+    },
 
-    alignItems: 'center',
-    justifyContent: 'center',
 
-    marginRight: 13,
-  },
+    subtitle: {
+      marginTop: 6,
 
-  settingIconText: {
-    fontSize: 17,
-  },
+      fontSize: 14,
 
-  settingContent: {
-    flex: 1,
-  },
+      lineHeight: 21,
 
-  settingTitle: {
-    fontSize: 14,
+      color:
+        colors.textSecondary,
+    },
 
-    fontWeight: '700',
 
-    color: '#1F2937',
+    /* ================================================= */
+    /* PROFILE                                            */
+    /* ================================================= */
 
-    marginBottom: 3,
-  },
+    profileCard: {
+      flexDirection: 'row',
 
-  settingValue: {
-    fontSize: 12,
+      alignItems: 'center',
 
-    color: '#6B7280',
-  },
+      backgroundColor:
+        colors.primary,
 
-  separator: {
-    height: 1,
+      borderRadius: 18,
 
-    backgroundColor: '#EEF1F5',
+      padding: 18,
 
-    marginLeft: 69,
-  },
+      marginBottom: 28,
 
-  chevron: {
-    fontSize: 25,
+      shadowColor:
+        colors.primary,
 
-    lineHeight: 27,
+      shadowOffset: {
+        width: 0,
+        height: 7,
+      },
 
-    color: '#9CA3AF',
+      shadowOpacity:
+        isDark ? 0.25 : 0.18,
 
-    marginLeft: 10,
-  },
+      shadowRadius: 14,
 
-  /* ================================================= */
-  /* LOGOUT                                             */
-  /* ================================================= */
+      elevation: 5,
+    },
 
-  logoutRow: {
-    minHeight: 74,
 
-    flexDirection: 'row',
+    avatar: {
+      width: 58,
 
-    alignItems: 'center',
+      height: 58,
 
-    paddingHorizontal: 16,
+      borderRadius: 29,
 
-    paddingVertical: 12,
-  },
+      backgroundColor:
+        colors.surface,
 
-  logoutIcon: {
-    width: 40,
-    height: 40,
+      alignItems: 'center',
 
-    borderRadius: 12,
+      justifyContent: 'center',
 
-    backgroundColor: '#FEF2F2',
+      marginRight: 14,
+    },
 
-    alignItems: 'center',
-    justifyContent: 'center',
 
-    marginRight: 13,
-  },
+    avatarText: {
+      fontSize: 19,
 
-  logoutIconText: {
-    fontSize: 19,
+      fontWeight: '800',
 
-    color: '#DC2626',
+      color:
+        colors.primary,
+    },
 
-    fontWeight: '700',
-  },
 
-  logoutTitle: {
-    fontSize: 14,
+    profileInfo: {
+      flex: 1,
+    },
 
-    fontWeight: '800',
 
-    color: '#DC2626',
+    profileName: {
+      fontSize: 18,
 
-    marginBottom: 3,
-  },
+      fontWeight: '800',
 
-  logoutSubtitle: {
-    fontSize: 12,
+      color: '#FFFFFF',
 
-    color: '#9CA3AF',
-  },
+      marginBottom: 4,
+    },
 
-  logoutChevron: {
-    fontSize: 25,
 
-    lineHeight: 27,
+    profileEmail: {
+      fontSize: 13,
 
-    color: '#DC2626',
-  },
+      color:
+        'rgba(255,255,255,0.82)',
+    },
 
-  logoutPressed: {
-    backgroundColor: '#FFF7F7',
-  },
 
-  logoutDisabled: {
-    opacity: 0.55,
-  },
+    /* ================================================= */
+    /* SECTIONS                                           */
+    /* ================================================= */
 
-  /* ================================================= */
-  /* FOOTER                                             */
-  /* ================================================= */
+    sectionTitle: {
+      fontSize: 13,
 
-  footer: {
-    alignItems: 'center',
+      fontWeight: '800',
 
-    marginTop: 12,
+      color:
+        colors.textSecondary,
 
-    marginBottom: 8,
-  },
+      marginBottom: 9,
 
-  footerLogo: {
-    fontSize: 14,
+      marginLeft: 4,
 
-    fontWeight: '800',
+      textTransform: 'uppercase',
 
-    color: '#1769E0',
-  },
+      letterSpacing: 0.7,
+    },
 
-  version: {
-    marginTop: 4,
 
-    fontSize: 11,
+    sectionCard: {
+      backgroundColor:
+        colors.surface,
 
-    color: '#9CA3AF',
-  },
+      borderRadius: 16,
 
-});
+      overflow: 'hidden',
+
+      marginBottom: 24,
+
+      borderWidth:
+        isDark ? 1 : 0,
+
+      borderColor:
+        isDark
+          ? colors.border
+          : 'transparent',
+
+      shadowColor:
+        '#000000',
+
+      shadowOffset: {
+        width: 0,
+        height: 3,
+      },
+
+      shadowOpacity:
+        isDark ? 0.18 : 0.04,
+
+      shadowRadius: 10,
+
+      elevation:
+        isDark ? 3 : 2,
+    },
+
+
+    /* ================================================= */
+    /* SETTING ROW                                        */
+    /* ================================================= */
+
+    settingRow: {
+      minHeight: 70,
+
+      flexDirection: 'row',
+
+      alignItems: 'center',
+
+      paddingHorizontal: 16,
+
+      paddingVertical: 12,
+    },
+
+
+    settingPressed: {
+      backgroundColor:
+        colors.surfaceSecondary,
+    },
+
+
+    settingIcon: {
+      width: 40,
+
+      height: 40,
+
+      borderRadius: 12,
+
+      backgroundColor:
+        colors.surfaceSecondary,
+
+      alignItems: 'center',
+
+      justifyContent: 'center',
+
+      marginRight: 13,
+    },
+
+
+    settingContent: {
+      flex: 1,
+    },
+
+
+    settingTitle: {
+      fontSize: 14,
+
+      fontWeight: '700',
+
+      color:
+        colors.text,
+
+      marginBottom: 3,
+    },
+
+
+    settingValue: {
+      fontSize: 12,
+
+      color:
+        colors.textSecondary,
+    },
+
+
+    separator: {
+      height: 1,
+
+      backgroundColor:
+        colors.border,
+
+      marginLeft: 69,
+    },
+
+
+    /* ================================================= */
+    /* THEME TOGGLE                                      */
+    /* ================================================= */
+
+    themeToggle: {
+      width: 58,
+
+      height: 32,
+
+      borderRadius: 18,
+
+      padding: 3,
+
+      justifyContent: 'center',
+
+      backgroundColor:
+        colors.surfaceSecondary,
+
+      borderWidth: 1,
+
+      borderColor:
+        colors.border,
+    },
+
+
+    themeToggleActive: {
+      backgroundColor:
+        colors.primary,
+
+      borderColor:
+        colors.primary,
+    },
+
+
+    themeToggleThumb: {
+      width: 26,
+
+      height: 26,
+
+      borderRadius: 13,
+
+      backgroundColor:
+        colors.surface,
+
+      alignItems: 'center',
+
+      justifyContent: 'center',
+
+      elevation: 2,
+
+      shadowColor: '#000000',
+
+      shadowOffset: {
+        width: 0,
+        height: 1,
+      },
+
+      shadowOpacity: 0.15,
+
+      shadowRadius: 2,
+
+      transform: [
+        {
+          translateX: 0,
+        },
+      ],
+    },
+
+
+    themeToggleThumbActive: {
+      transform: [
+        {
+          translateX: 26,
+        },
+      ],
+    },
+
+
+    /* ================================================= */
+    /* LOGOUT                                             */
+    /* ================================================= */
+
+    logoutRow: {
+      minHeight: 74,
+
+      flexDirection: 'row',
+
+      alignItems: 'center',
+
+      paddingHorizontal: 16,
+
+      paddingVertical: 12,
+    },
+
+
+    logoutIcon: {
+      width: 40,
+
+      height: 40,
+
+      borderRadius: 12,
+
+      backgroundColor:
+        isDark
+          ? 'rgba(248,113,113,0.14)'
+          : '#FEF2F2',
+
+      alignItems: 'center',
+
+      justifyContent: 'center',
+
+      marginRight: 13,
+    },
+
+
+    logoutTitle: {
+      fontSize: 14,
+
+      fontWeight: '800',
+
+      color:
+        colors.danger,
+
+      marginBottom: 3,
+    },
+
+
+    logoutSubtitle: {
+      fontSize: 12,
+
+      /*
+       * IMPORTANT:
+       * Use the theme text color instead
+       * of a fixed light-mode gray.
+       */
+      color:
+        colors.textSecondary,
+    },
+
+
+    logoutPressed: {
+      backgroundColor:
+        isDark
+          ? 'rgba(248,113,113,0.08)'
+          : '#FFF7F7',
+    },
+
+
+    logoutDisabled: {
+      opacity: 0.55,
+    },
+
+
+    /* ================================================= */
+    /* FOOTER                                             */
+    /* ================================================= */
+
+    footer: {
+      alignItems: 'center',
+
+      marginTop: 12,
+
+      marginBottom: 8,
+    },
+
+
+    footerLogo: {
+      fontSize: 14,
+
+      fontWeight: '800',
+
+      color:
+        colors.primary,
+    },
+
+
+    version: {
+      marginTop: 4,
+
+      fontSize: 11,
+
+      color:
+        colors.textTertiary,
+    },
+
+  });
+}
