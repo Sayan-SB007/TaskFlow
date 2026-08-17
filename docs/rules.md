@@ -1,7 +1,6 @@
 # TaskFlow --- Development Rules
 
 ## 1. Core Rule
-
 **Do not remove existing functionality while implementing a new feature
 unless the change is explicitly approved.**
 
@@ -19,118 +18,156 @@ Every feature change must preserve:
 
 ## 2. TypeScript
 
--   Prefer explicit interfaces/types for domain models.
--   Do not introduce `any` to hide a type error.
--   Fix the actual type mismatch instead.
--   Run:
-
-``` bash
-npx tsc --noEmit
-```
-
-before considering a feature complete.
+-   Prefer explicit types/interfaces.
+-   Do not use `any` to hide errors.
+-   Run `npx tsc --noEmit` after meaningful changes.
 
 ## 3. React Native
-
 -   Use `<Text>` for rendered strings.
 -   Avoid placing raw strings directly inside `<View>`, `<Pressable>`,
     etc.
--   Keep reusable UI components platform-safe.
--   Respect Safe Area requirements.
--   Avoid hard-coded device-specific dimensions.
+-   Keep reusable UI components platform-safe.-   Respect Safe Area requirements.
+-   Avoid device-specific hard-coded dimensions.
+-   Keep bottom actions clear of system navigation.
+-   Use platform-safe components.
 
 ## 4. State Management
 
--   Redux Toolkit is the application state-management standard.
+-   Redux Toolkit is the application state standard.
 -   Keep reducers predictable and serializable.
--   Avoid putting UI-only transient values into global state unless
-    required.
+-   Avoid putting UI-only transient values into global state unless  required.
 -   Do not duplicate the same task state in multiple independent stores.
+-   Do not use Redux as a replacement for SQLite.
 
-## 5. Offline-first
+## 5. Database
 
-Local persistence is authoritative for immediate user interaction.
-
-A task operation should not require an active internet connection to
-update the local UI.
-
-When offline:
+Use repositories as the boundary:
 
 ``` text
-Local write → pending operation
+Feature → Repository → SQLite
 ```
 
-When online:
+Do not put raw SQLite queries inside screens/components.
+
+Keep the existing structure:
 
 ``` text
-Pending operation → Firestore → synchronized
+database/
+├── migrations/
+├── repositories/
+├── sqlite.ts
+└── debug.ts
 ```
 
-Never silently discard a failed synchronization operation.
+Do not restructure it merely to make the folder tree look more complex.
 
-## 6. Firebase
+## 6. Offline-first
+
+``` text
+Local write → pending operation → Firestore when online
+```
+
+Never silently discard a failed sync operation.
+
+## 7. Firebase
 
 -   Never bypass authentication for user task access.
 -   Every user task path must be scoped to the authenticated UID.
--   Keep Firestore rules restrictive.
--   Do not use unrestricted production rules such as:
+-   Never use unrestricted production rules such as
+    `allow read, write: if true;`.
+-   Never commit secrets.
+
+## 8. Component Architecture
+
+Large screens should be decomposed by responsibility.
+
+When refactoring:
+
+1.  Identify independent UI responsibilities.
+2.  Extract focused components.
+3.  Keep orchestration in the screen.
+4.  Keep presentation in feature components.
+5.  Keep persistence/sync outside presentation.
+6.  Verify imports/usages before deleting old implementations.
+
+## 9. Duplicate Implementations
+
+Before editing/deleting a task form or details implementation:
 
 ``` text
-allow read, write: if true;
+Search usages
+ ↓
+Trace imports
+ ↓
+Identify rendered implementation
+ ↓
+Modify active implementation
+ ↓
+Delete duplicate only after verification
 ```
 
-## 7. UI Changes
+## 10. Theme
 
-Before changing an existing component:
+Use the active theme:
 
-1.  Understand its current props.
-2.  Understand where it is rendered.
-3.  Check whether another screen/component contains a duplicate
-    implementation.
-4.  Preserve existing behavior.
-5.  Then modify the UI.
+``` tsx
+const {theme} = useTheme();
+```
 
-## 8. Forms
+Prefer:
 
--   Required fields must have basic validation.
--   Optional due date/time must remain optional.
--   Date/time should use native pickers.
--   Avoid free-form text entry for structured date/time values.
--   Disable or prevent duplicate submissions when a save operation is
-    already in progress.
+``` tsx
+theme.colors.surface
+```
 
-## 9. Navigation
+over:
 
--   Keep authentication and application navigation separate.
--   Do not create duplicate screens for the same responsibility without
-    a clear reason.
--   If a screen is lazy-loaded, its props must still be typed correctly.
+``` tsx
+lightTheme.colors.surface
+```
 
-## 10. Performance
+Components supporting dark mode must not hard-code light-theme colors.
+
+## 11. Forms
+
+-   Required fields need validation.
+-   Due date/time remain optional.
+-   Use native pickers.
+-   Prevent duplicate submissions.
+-   Preserve edit behavior.
+
+## 12. Notifications
+
+Keep scheduling/handling separate from task-list rendering.
+Update/cancel reminders when task reminder data changes.
+
+## 13. Performance
 
 -   Use `FlatList` for potentially large task lists.
 -   Avoid unnecessary full-list re-renders.
 -   Keep expensive synchronization operations outside render.
 -   Lazy-load screens where it improves startup/bundle behavior.
 
-## 11. Documentation
+## 14. Documentation
 
-Whenever architecture changes:
+After architecture changes update:
 
--   Update `architecture.md`.
--   Update `phases.md` if project status changes.
--   Update `memory.md` if a durable technical decision changes.
+-   `README.md`
+-   `architecture.md`
+-   `phases.md`
+-   `memory.md`
 
-## 12. Git
+Update `design.md` for significant UI/theme decisions.
 
-Commit small logical changes.
+## 15. Git
 
-Recommended format:
+Recommended commit style:
 
 ``` text
 feat: add task reminders
-fix: resolve task sync permission error
-refactor: extract task form component
+fix: resolve task sync issue
+refactor: extract task screen components
+feat: add dark theme
 docs: update architecture documentation
 chore: update dependencies
 ```
@@ -143,3 +180,14 @@ Never commit:
 -   local machine secrets
 -   unnecessary build artifacts
 -   `node_modules/`
+
+## 16. Verification
+
+Run:
+
+``` bash
+npx tsc --noEmit
+```
+
+Then verify authentication, CRUD, offline/reconnect sync, notifications,
+theme switching, modal safe-area behavior and Android build/install.

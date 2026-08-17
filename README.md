@@ -1,73 +1,58 @@
 # TaskFlow
 
-TaskFlow is a cross-platform React Native task-management application
-built with a modular, offline-first architecture.
+TaskFlow is a cross-platform React Native task-management application built with a modular, offline-first architecture.
 
-It was developed for a React Native Team Lead take-home assignment
-covering authentication, task management, offline
-storage/synchronization, notifications, modular architecture, Redux
-Toolkit, React Navigation, performance, and production-oriented code
-organization. 
+It demonstrates authentication, task management, offline-first SQLite persistence, Firestore synchronization, notifications, Redux Toolkit, React Navigation, theming, FlatList/lazy-loading performance, modular architecture, and production-oriented code organization.
 
 ## Features
 
 ### Authentication
-
--   Firebase email/password authentication.
--   Session persistence.
--   Login.
--   Registration.
--   Logout.
+- Firebase email/password authentication
+- Session persistence
+- Login, registration and logout
+- Protected application navigation
 
 ### Task Management
-
--   Create tasks.
--   Edit tasks.
--   Delete tasks.
--   Mark complete/incomplete.
--   Task details.
--   Priority: Low / Medium / High.
--   Optional due date.
--   Optional due time.
--   Basic validation.
--   Native date/time pickers.
+- Create, edit and delete tasks
+- Mark complete/incomplete
+- Task details
+- Priority: Low / Medium / High
+- Optional due date/time
+- Basic validation
+- Native date/time pickers
+- All / Today / Upcoming filtering
 
 ### Offline-first
-
--   SQLite local persistence.
--   Tasks remain available offline.
--   Local changes are queued.
--   Firestore synchronization occurs when connectivity returns.
--   Sync status is surfaced to the user.
-
-### Navigation
-
--   Authentication flow.
--   Main application flow.
--   Task list.
--   Task details.
--   Task form.
-
-### State Management
-
--   Redux Toolkit.
-
-### Performance
-
--   FlatList for task lists.
--   Lazy loading for applicable screens.
+- SQLite local persistence
+- Tasks remain available offline
+- Local changes are queued for synchronization
+- Firestore synchronization when connectivity returns
+- Sync/offline state surfaced to the user
 
 ### Notifications
+- Local task reminders
+- Notification handling
+- Today's reminder UI and notification indicator
+- Firebase Cloud Messaging/server push is a bonus/future enhancement
 
--   Local task reminders are part of the notification implementation.
--   Firebase Cloud Messaging/server push is a bonus/future enhancement.
+### Performance
+- `FlatList` for task collections
+- Stable keys
+- Focused task-row components
+- Lazy loading where applicable
+- Sync work outside render paths
+- Refactored large TasksScreen
 
-The assignment explicitly requires local task reminders and lists
-Firebase Cloud Messaging server push as a bonus.
+### Theming
+- Light theme
+- Dark theme
+- Theme switching from Settings
+- Theme-aware screens, cards, sheets and navigation
+
 
 ## Architecture
 
-``` text
+
                     ┌──────────────────┐
                     │   React Native   │
                     │       UI         │
@@ -79,46 +64,38 @@ Firebase Cloud Messaging server push as a bonus.
                              │
                     ┌────────▼─────────┐
                     │ Redux Toolkit    │
+                    │  App / Feature   │
+                    │      State       │
                     └────────┬─────────┘
                              │
-                 ┌───────────┴───────────┐
-                 │                       │
-        ┌────────▼────────┐    ┌────────▼────────┐
-        │ SQLite / Local  │    │ Firebase Auth   │
-        │ Persistence     │    │ + Firestore     │
-        └────────┬────────┘    └────────┬────────┘
-                 │                      │
-                 └──────────┬───────────┘
-                            │
-                    ┌───────▼────────┐
-                    │ Sync / NetInfo │
-                    └────────────────┘
-```
+              ┌──────────────┴──────────────┐
+              │                             │
+     ┌────────▼─────────┐          ┌────────▼─────────┐
+     │ Feature Logic /  │          │ Firebase Auth    │
+     │ Services         │          │                  │
+     └────────┬─────────┘          └──────────────────┘
+              │
+     ┌────────▼─────────┐
+     │ Repository Layer │
+     └────────┬─────────┘
+              │
+     ┌────────▼─────────┐
+     │ SQLite / Local   │
+     │   Persistence    │
+     └────────┬─────────┘
+              │
+     ┌────────▼─────────┐
+     │ Sync / NetInfo   │
+     └────────┬─────────┘
+              │
+     ┌────────▼─────────┐
+     │ Firebase         │
+     │   Firestore      │
+     └──────────────────┘
 
-### Offline synchronization
+### Folder Structure
 
-``` text
-User action
-    ↓
-SQLite/local state
-    ↓
-Pending operation
-    ↓
-Network available?
-   / \
- No   Yes
- |     |
-Keep   Sync
-queue  Firestore
- |      |
- └──────┘
-    ↓
-Synced
-```
-
-## Folder Structure
-
-``` text
+```text
 TaskFlow/
 ├── .vscode/
 ├── android/
@@ -136,22 +113,42 @@ TaskFlow/
 │   │   ├── appSlice.ts
 │   │   └── store.ts
 │   ├── components/
+│   │   ├── Button/
+│   │   ├── ErrorState/
+│   │   ├── Input/
+│   │   ├── Loading/
+│   │   ├── OfflineBanner/
+│   │   └── Screen/
 │   ├── config/
 │   ├── database/
+│   │   ├── migrations/
+│   │   │   └── v1.ts
+│   │   ├── repositories/
+│   │   │   ├── syncRepository.ts
+│   │   │   └── taskRepository.ts
+│   │   ├── debug.ts
+│   │   └── sqlite.ts
 │   ├── features/
+│   │   ├── auth/
+│   │   ├── notifications/
+│   │   ├── settings/
+│   │   ├── sync/
+│   │   └── tasks/
 │   ├── hooks/
 │   ├── navigation/
 │   ├── theme/
 │   ├── types/
 │   └── utils/
 ├── App.tsx
-├── .gitignore
 ├── package.json
+├── .gitignore
 └── README.md
 ```
 
-This structure keeps reusable UI, feature logic, application state,
-navigation, persistence, configuration, and theme code separated.
+`features/` owns domain functionality, `components/` shared UI, `database/` local persistence, `config/` configuration, `navigation/` navigation, `theme/` design tokens, and `app/` application-wide store/provider setup.
+
+A root `src/services/` layer can be introduced if shared infrastructure services become numerous enough to justify it. It is not required just to make the folder tree look more complex.
+
 
 ## Main Libraries
 
@@ -167,73 +164,127 @@ navigation, persistence, configuration, and theme code separated.
   NetInfo                                    Connectivity detection
   `@react-native-community/datetimepicker`   Native date/time picker
   Local notification library                 Task reminders
+  Project icon package / FontAwesome6         Icons 
 
 ## Requirements
 
-Recommended environment:
+- Node.js compatible with installed React Native
+- npm
+- Android Studio / Android SDK
+- Xcode for iOS on macOS
+- Firebase project
 
--   Node.js version compatible with the installed React Native version.
--   npm.
--   Android Studio / Android SDK for Android.
--   Xcode for iOS development on macOS.
--   Firebase project configured for the application.
-
-Check the project's `package.json` for the exact dependency versions.
+Check `package.json` for exact versions.
 
 ## Installation
 
-Clone the repository:
-
-``` bash
+```bash
 git clone <your-repository-url>
 cd TaskFlow
-```
-
-Install dependencies:
-
-``` bash
 npm install
-```
-
-For Android:
-
-``` bash
+npx react-native start
 npx react-native run-android
 ```
 
 For iOS:
 
-``` bash
+```bash
 cd ios
 pod install
 cd ..
 npx react-native run-ios
 ```
 
-Use the commands appropriate for the installed React Native version and
-local development environment.
-
 ## Type Checking
 
-Run:
-
-``` bash
+```bash
 npx tsc --noEmit
 ```
 
 The project should pass TypeScript validation before submission.
 
-## Firebase Setup
+## Tasks Feature Refactor
 
-Configure:
+The original TasksScreen grew to several thousand lines and was decomposed without removing functionality:
 
--   Firebase Authentication.
--   Cloud Firestore.
--   Android/iOS Firebase application configuration.
+```text
+features/tasks/
+├── components/
+│   ├── TaskCard.tsx
+│   ├── ProductivityCard.tsx
+│   ├── TasksHeader.tsx
+│   ├── TaskFilters.tsx
+│   ├── TaskEmptyState.tsx
+│   ├── DeleteConfirmation.tsx
+│   ├── NotificationsSheet.tsx
+│   ├── TaskLoadingOverlay.tsx
+│   ├── TaskFormSheet.tsx
+│   └── TaskDetailsSheet.tsx
+├── screens/
+│   └── TasksScreen.tsx
+└── utils/
+    └── taskDateUtils.ts
+```
+
+`TasksScreen` primarily orchestrates Redux state/actions, filters, selected task, modal visibility and callbacks. Focused components own presentation and local UI concerns.
+
+## Data Flow
+
+### Online
+
+```text
+User → Task Form → Feature/Redux → Task Repository → SQLite
+     → Sync Queue → Firestore → Synced state
+```
+
+### Offline
+
+```text
+User → Task Form → Feature/Redux → Task Repository
+     → SQLite → Pending Sync Queue → Local UI state
+```
+
+### Reconnection
+
+```text
+NetInfo online
+ ↓
+Sync service
+ ↓
+Pending local operations
+ ↓
+Firestore write/delete
+ ↓
+Mark synchronized
+ ↓
+Refresh local state
+```
+
+UI components do not need to know the SQLite/Firestore implementation details.
+
+## Authentication Flow
+
+```text
+App
+ ↓
+Firebase Auth session check
+ ├── No session → AuthNavigator → Login / Sign Up
+ └── Session → AppNavigator → Tasks / Settings
+```
+
+The project does **not** require an artificial `AuthProvider.tsx`; authentication remains aligned with the existing auth feature/state/navigation implementation.
+
+## Firestore
+
+Tasks are user-owned:
+
+```text
+users/{userId}/tasks/{taskId}
+```
 
 Recommended Firestore ownership rule:
 
-``` text
+```text
 rules_version = '2';
 
 service cloud.firestore {
@@ -250,23 +301,20 @@ Never use unrestricted production rules.
 
 ## Environment Configuration
 
-The assignment requires development, staging, and production environment
-support and sample environment files. 
+The assignment expects development, staging and production configuration with sample files:
 
-Recommended committed examples:
-
-``` text
+```text
 .env.example
 .env.development.example
 .env.staging.example
 .env.production.example
 ```
 
-Actual environment files should not be committed.
+Real environment files/secrets must not be committed.
 
 Example:
 
-``` env
+```env
 FIREBASE_API_KEY=
 FIREBASE_AUTH_DOMAIN=
 FIREBASE_PROJECT_ID=
@@ -275,51 +323,39 @@ FIREBASE_MESSAGING_SENDER_ID=
 FIREBASE_APP_ID=
 ```
 
-Use the project's actual configuration mechanism when wiring these
-values into native and JavaScript code.
+Use the project's actual configuration mechanism.
+
+
 
 ## Offline Testing
 
-To test offline behavior:
-
-1.  Log in.
-2.  Load the task list.
-3.  Disable network connectivity.
-4.  Create/edit/delete tasks.
-5.  Confirm changes remain visible locally.
-6.  Re-enable connectivity.
-7.  Confirm pending operations synchronize to Firestore.
-8.  Confirm sync status returns to synced.
+1. Log in.
+2. Load tasks.
+3. Disable network.
+4. Create/edit/delete tasks.
+5. Confirm local changes remain visible.
+6. Re-enable network.
+7. Confirm pending operations synchronize.
+8. Confirm synced state.
 
 ## Notification Testing
 
-For a task reminder:
+1. Create a task.
+2. Select due date/time.
+3. Save.
+4. Verify local notification.
+5. Edit/delete the task.
+6. Verify reminder handling updates.
 
-1.  Create a task.
-2.  Select a due date.
-3.  Select a due time.
-4.  Save the task.
-5.  Keep the task reminder scheduled.
-6.  Verify the local notification.
-7.  Edit/delete the task and verify reminder handling.
+## Performance Verification
 
-## Known Limitations
+Verify FlatList, stable keys, focused task rows, lazy loading where configured, and synchronization outside render paths.
 
-The following should be verified before final submission:
-
--   Dark/light theme must be verified across all major screens.
--   Firebase Cloud Messaging server push is a bonus requirement and may
-    remain outside the current scope.
--   iOS notification behavior requires testing on an appropriate iOS
-    environment.
--   Exact dependency compatibility should follow the versions installed
-    in `package.json`.
-
-## Security Notes
+## Security
 
 Do not commit:
 
-``` text
+```text
 .env
 .env.local
 private keys
@@ -328,19 +364,47 @@ service-account credentials
 local machine secrets
 ```
 
-Firebase client configuration values are not a substitute for Firestore
-security rules. Data access must be enforced by Firebase Authentication
-and Firestore rules.
+Firebase client configuration is not an authorization boundary. Firestore rules must enforce ownership.
+
+## Known Limitations / Future Enhancements
+
+- Firebase Cloud Messaging/server push is bonus/future scope.
+- Recurring tasks.
+- Shared/team tasks.
+- Attachments.
+- Advanced analytics.
+- iOS notification behavior requires iOS testing.
+- Exact dependency compatibility follows `package.json`.
+- Development/staging/production configuration should be verified before submission.
+
+## Final QA
+
+- [ ] Authentication / registration / logout
+- [ ] Task CRUD
+- [ ] Complete/incomplete
+- [ ] Task details
+- [ ] All/Today/Upcoming filtering
+- [ ] SQLite persistence
+- [ ] Offline create/edit/delete
+- [ ] Reconnection sync
+- [ ] Firestore ownership rules
+- [ ] Local reminders
+- [ ] Notification UI
+- [ ] Light/dark theme
+- [ ] Theme switching
+- [ ] Safe-area sheets
+- [ ] FlatList
+- [ ] Lazy loading
+- [ ] Environment configuration
+- [ ] `npx tsc --noEmit`
+- [ ] Android build/install
+- [ ] iOS verification when available
 
 ## Documentation
 
-Detailed project documentation:
-
--   [`docs/prd.md`](docs/prd.md)
--   [`docs/architecture.md`](docs/architecture.md)
--   [`docs/rules.md`](docs/rules.md)
--   [`docs/phases.md`](docs/phases.md)
--   [`docs/design.md`](docs/design.md)
--   [`docs/memory.md`](docs/memory.md)
-
-
+- [`docs/prd.md`](docs/prd.md)
+- [`docs/architecture.md`](docs/architecture.md)
+- [`docs/rules.md`](docs/rules.md)
+- [`docs/phases.md`](docs/phases.md)
+- [`docs/design.md`](docs/design.md)
+- [`docs/memory.md`](docs/memory.md)

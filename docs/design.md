@@ -4,86 +4,142 @@
 
 TaskFlow uses a clean productivity-app visual language:
 
--   White/light surfaces.
--   Soft gray secondary surfaces.
 -   Blue primary actions.
--   Muted borders for secondary controls.
--   Strong typography hierarchy.
 -   Rounded cards and sheets.
--   Clear status and priority indicators.
+-   Clear typography hierarchy.
+-   Semantic priority colors.
+-   Muted secondary information.
+-   FontAwesome6 iconography.
+-   Elevated modal/sheet treatment.
+-   Light and dark themes.
 
-## 2. Task Form
-
-The create/edit task form is presented as a modal/bottom sheet so that
-the task list remains visually behind the form.
-
-The visual hierarchy should communicate:
+## 2. Light Theme
 
 ``` text
-Dashboard/list
-    ↓
-dimmed background
-    ↓
-elevated task sheet
-    ↓
-form controls
+Light background
+ ↓
+White elevated surfaces
+ ↓
+Blue primary actions
 ```
 
-The sheet should have:
+## 3. Dark Theme
+
+``` text
+Dark background
+ ↓
+Dark elevated surfaces
+ ↓
+Blue primary actions
+ ↓
+Light primary text
+ ↓
+Muted secondary text
+```
+
+Components must consume the active theme instead of importing
+`lightTheme` directly.
+
+## 4. Tasks Header
+
+The header provides:
+
+-   Time-of-day greeting.
+-   Main title.
+-   Notification action.
+-   Notification badge when unread reminders exist.
+-   Consistent iconography.
+
+Core actions should use FontAwesome6 rather than arbitrary emoji glyphs.
+
+## 5. Productivity Card
+
+Communicates:
+
+-   Completion percentage.
+-   Total tasks.
+-   Completed tasks.
+-   Remaining tasks.
+
+It must maintain readable contrast in both themes.
+
+## 6. Task Cards
+
+Each task card provides:
+
+-   Completion control.
+-   Task title.
+-   Due date/time.
+-   Priority.
+-   Details/overflow action.
+
+Task collections use FlatList.
+
+Task cards use the active theme.
+
+## 7. Task Filters
+
+``` text
+All | Today | Upcoming
+```
+
+Selected state must be visually clear. Today filtering uses
+calendar-date semantics.
+
+## 8. Create/Edit Task Sheet
+
+The task form is an elevated sheet:
+
+``` text
+Underlying task page
+ ↓
+Theme-aware backdrop
+ ↓
+Elevated sheet
+ ↓
+Form
+```
+
+Requirements:
 
 -   Rounded top corners.
--   Clear elevation/shadow.
--   Safe-area spacing.
--   Scrollable content when the keyboard or small screen reduces
-    available height.
--   Bottom action area that never overlaps system navigation.
-
-## 3. Modal Treatment
-
-A modal should look visually elevated above the screen behind it.
-
-Use:
-
--   Semi-transparent backdrop.
--   White surface.
 -   Shadow/elevation.
--   Rounded corners.
--   Enough top/bottom spacing.
 -   Safe-area support.
+-   Scrollable content.
+-   Bottom action never overlaps system navigation.
 
-Avoid making the modal and the underlying page look like the same flat
-surface.
+## 9. Task Details Sheet
 
-## 4. Inputs
+The details sheet follows the same modal treatment and contains:
 
-### Primary text fields
+-   Task status.
+-   Title.
+-   Description.
+-   Due date/time.
+-   Priority.
+-   Complete/incomplete action.
+-   Edit.
+-   Delete.
+-   Close.
 
-Use:
+The displayed task must reflect changes made in the underlying task
+state.
 
--   Light gray border/background when inactive.
--   Stronger border only when focused.
--   Clear placeholder text.
--   Adequate vertical padding.
+## 10. Notification Sheet
 
-### Date/time fields
+Notification UI should look like a modal/sheet rather than the same flat
+surface as the underlying page.
 
-Date and time are structured controls, not free-form text inputs.
+It uses:
 
-Use:
+-   Theme-aware backdrop.
+-   Elevated surface.
+-   Bell icon.
+-   Today's reminder heading.
+-   Reminder list or caught-up state.
+-   Close action.
 
--   Native date picker.
--   Native time picker.
--   Muted gray border in the normal state.
--   Calendar/clock icon.
--   Clear action when a value has been selected.
--   Optional helper text.
-
-Avoid using the same strong blue outline used for selected priority
-states.
-
-## 5. Priority
-
-Priority uses three semantic colors:
+## 11. Priority
 
 ``` text
 Low    → green
@@ -91,65 +147,80 @@ Medium → amber/orange
 High   → red
 ```
 
-Selected priority may use the primary blue outline because it represents
-an active selection.
+Selected priority can use the primary blue outline.
 
-## 6. Primary Button
+## 12. Inputs
 
-The primary create/save action uses the application's primary blue.
+Text fields need readable placeholders, borders and values in both
+themes.
 
-The button must:
+Date/time use native pickers and calendar/clock icons.
 
--   Have sufficient height.
--   Have rounded corners.
--   Remain above the bottom safe area.
--   Never overlap content.
--   Have disabled/loading state when needed.
+## 13. Buttons
 
-## 7. Icons
+Primary:
 
-Prefer a consistent icon family instead of text glyphs or
-generated-looking symbols.
+-   Blue.
+-   Adequate height.
+-   Rounded.
+-   Disabled/loading state.
 
-Examples:
+Secondary:
 
--   Calendar icon for due date.
--   Clock icon for due time.
--   Close icon for modal dismissal.
--   Check icon for completion.
--   Bell icon for reminders.
+-   Theme-aware surface/border.
 
-## 8. Typography
+Destructive:
 
-Recommended hierarchy:
+-   Semantic danger color.
+
+## 14. Icons
+
+Use FontAwesome6 consistently:
+
+-   Bell.
+-   Calendar.
+-   Clock.
+-   Check.
+-   Close.
+-   Trash.
+-   Plus.
+-   Sun/moon.
+
+## 15. Typography
 
 ``` text
-Screen title       → large / bold
-Section label      → small / medium / uppercase where appropriate
-Task title         → medium / semibold
-Body description   → regular
-Helper text        → small / muted
-Button text        → medium / semibold
+Screen title → large/bold
+Section label → small/medium
+Task title → semibold
+Body → regular
+Helper → small/muted
+Button → medium/semibold
 ```
 
-## 9. Accessibility
+## 16. Accessibility
 
--   Buttons should have adequate touch targets.
--   Color must not be the only indication of state.
--   Text must remain readable against its background.
--   Interactive elements should have meaningful accessibility labels.
+-   Meaningful accessibility labels.
+-   Adequate touch targets.
+-   Do not rely on color alone.
+-   Maintain readable contrast.
 -   Avoid extremely small text.
 
-## 10. Responsive Layout
+## 17. Responsive Layout
 
-Do not depend on a single Android device size.
+Use Flexbox, safe areas, FlatList/ScrollView and keyboard-aware behavior
+where needed. Avoid device-specific fixed layouts.
 
-Use:
+## 18. Modal Principle
 
--   Flexbox.
--   Safe areas.
--   ScrollView/KeyboardAvoidingView where appropriate.
--   Platform-aware spacing where necessary.
+All sheets should communicate elevation:
 
-The task sheet must remain usable on smaller screens and when the
-keyboard is visible.
+``` text
+Underlying page
+      ↓
+Semi-transparent theme-aware overlay
+      ↓
+Elevated surface
+```
+
+Create task, edit/details and notifications should follow this shared
+visual principle.

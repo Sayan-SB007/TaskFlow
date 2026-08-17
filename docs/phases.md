@@ -1,26 +1,27 @@
 # TaskFlow --- Development Phases
 
-## Phase 1 --- Project Foundation
+## Phase 1 --- Foundation
 
 ### Completed
 
--   React Native project created.
--   TypeScript configured.
--   Modular `src` structure established.
--   Redux Toolkit store/application state foundation.
--   React Navigation foundation.
--   Reusable UI components.
+-   React Native project.
+-   TypeScript.
+-   Modular `src` structure.
+-   Redux Toolkit.
+-   React Navigation.
+-   Shared UI components.
+-   Database/theme/config foundations.
 
 ## Phase 2 --- Authentication
 
 ### Completed
 
--   Firebase Authentication integration.
+-   Firebase Authentication.
 -   Login.
 -   Registration.
--   Persistent authenticated session.
+-   Persistent session.
 -   Logout.
--   Authenticated application flow.
+-   Separate Auth/App navigation.
 
 ## Phase 3 --- Task Management
 
@@ -38,13 +39,16 @@
 -   Optional due date.
 -   Optional due time.
 -   Native date/time picker integration.
+-   All/Today/Upcoming filtering.
 
 ## Phase 4 --- Local Persistence
 
 ### Completed
 
--   SQLite local storage.
--   Local task reads/writes.
+-   SQLite.
+-   Migration foundation.
+-   Task repository.
+-   Sync repository.
 -   Offline task availability.
 
 ## Phase 5 --- Synchronization
@@ -58,76 +62,92 @@
 -   Sync status UI.
 -   User feedback for offline/syncing/synced states.
 
-## Phase 6 --- UI/UX Refinement
+## Phase 6 --- UI/UX
 
 ### Completed
 
--   Task form sheet/modal styling.
--   Task details modal styling.
--   Priority visual states.
--   Muted date/time fields.
--   Native picker icons.
--   Modal elevation/shadow treatment.
--   Safe-area-aware layout.
--   Bottom action spacing.
+-   Create/edit sheets.
+-   Task details sheet.
+-   Notification sheet.
+-   Delete confirmation.
+-   Loading states.
+-   Safe-area handling.
+-   Modal backdrop/elevation.
+-   Consistent iconography.
 
-## Phase 7 --- Performance
+## Phase 7 --- Tasks Feature Refactor
 
 ### Completed
 
--   FlatList-based task rendering.
--   Lazy loading implemented for applicable screens.
+The large TasksScreen was decomposed into focused components:
 
-## Phase 8 --- Notifications
+-   TaskCard.
+-   ProductivityCard.
+-   TasksHeader.
+-   TaskFilters.
+-   TaskEmptyState.
+-   DeleteConfirmation.
+-   NotificationsSheet.
+-   TaskLoadingOverlay.
+-   TaskFormSheet.
+-   TaskDetailsSheet.
 
-### Current
+Date filtering logic was also separated into task utilities.
 
--   Local notification implementation/integration is the next feature
-    area.
--   Task reminder scheduling should use the task's optional due
-    date/time.
--   Notification cancellation/rescheduling should happen when a task is
-    deleted or its reminder changes.
+## Phase 8 --- Performance
 
-### Bonus / Future
+### Completed / Implemented
+
+-   FlatList.
+-   Stable task keys.
+-   Lazy loading where configured.
+-   Smaller task presentation components.
+
+## Phase 9 --- Notifications
+
+### Implemented
+
+-   Local task reminders.
+-   Notification handling.
+-   Notification indicator.
+-   Today's task reminders UI.
+
+### Future / Bonus
 
 -   Firebase Cloud Messaging server push.
 
-The assignment identifies local task reminders as a requirement and FCM
-server push as a bonus.  
-
-## Phase 9 --- Environment Configuration
-
-### Remaining / Verify
-
-The assignment requires:
-
--   Development environment.
--   Staging environment.
--   Production environment.
--   Sample `.env` files for each environment.  
-
-Before final submission, verify that the project can clearly explain how
-each environment is selected and run.
-
 ## Phase 10 --- Theming
 
-### Remaining / Verify
+### Implemented
 
-The assignment requires dark/light mode.  
-
-Verify:
-
--   Theme state.
--   System/default behavior.
 -   Light theme.
 -   Dark theme.
--   Persistence if desired.
--   All major components respond to theme changes.
+-   ThemeProvider.
+-   Settings theme switching.
+-   Theme-aware task screen.
+-   Theme-aware task cards.
+-   Theme-aware sheets/modals.
+-   Theme-aware navigation.
 
-## Phase 11 --- Final QA
+### Final visual verification
 
-Before submission:
+Check contrast and icon/text colors across all major screens.
+
+## Phase 11 --- Environment Configuration
+
+### Remaining / Verify
+
+Document and verify:
+
+-   Development.
+-   Staging.
+-   Production.
+-   Sample environment files.
+-   Build selection.
+
+Do not commit real secrets.
+
+## Phase 12 --- Final QA
 
 ``` text
 Authentication
@@ -139,40 +159,28 @@ Edit task
 Delete task
     ↓
 Complete / incomplete
-    ↓
-Offline create/edit/delete
-    ↓
+ ↓
+Offline operation create/edit/delete
+ ↓
 Reconnect
-    ↓
+ ↓
 Sync
-    ↓
+ ↓
 Reminder notification
-    ↓
-Notification tap
-    ↓
-Task details
+ ↓
+Notification UI
+ ↓
+Details
+ ↓
+Theme switch
 ```
 
-Also verify:
+Also run:
 
--   `npx tsc --noEmit`
--   Android build.
--   iOS build if available.
--   No console errors.
--   No missing SafeAreaProvider errors.
--   No raw text rendering errors.
--   No Firestore permission errors.
+``` bash
+npx tsc --noEmit
+```
 
-## Phase 12 --- Submission
+and verify Android build/install.
 
-Required deliverables include:
 
--   GitHub repository.
--   Source code.
--   README.
--   Architecture explanation.
--   Libraries used.
--   Environment setup.
--   Known limitations.
--   Sample environment files.
--   Loom walkthrough.  
