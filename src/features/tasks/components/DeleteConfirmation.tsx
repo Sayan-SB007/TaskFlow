@@ -4,7 +4,7 @@ import FontAwesome6 from '@react-native-vector-icons/fontawesome6/static';
 import type {Task} from '../types';
 import {spacing} from '../../../theme/spacing';
 import {typography} from '../../../theme/typography';
-import {useTheme} from '../../../theme/ThemeProvider';
+import {useTheme} from '../../../app/providers/ThemeProvider';
 
 interface DeleteConfirmationProps {
   visible: boolean;

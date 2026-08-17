@@ -5,8 +5,8 @@ import React, {
 import {Provider} from 'react-redux';
 
 import {store} from '../store';
+import { ThemeProvider } from './ThemeProvider';
 
-import {ThemeProvider} from '../../theme/ThemeProvider';
 
 export function AppProviders({
   children,

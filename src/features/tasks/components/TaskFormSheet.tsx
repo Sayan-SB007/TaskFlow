@@ -49,7 +49,7 @@ import {
 
 import {
   useTheme,
-} from '../../../theme/ThemeProvider';
+} from '../../../app/providers/ThemeProvider';
 
 
 /* ================================================= */

@@ -24,7 +24,7 @@ import {
 import { Task } from '../features/tasks/types';
 import {
   useTheme,
-} from '../theme/ThemeProvider';
+} from '../app/providers/ThemeProvider';
 
 /* ================================================= */
 /* LAZY LOADED SCREENS                               */

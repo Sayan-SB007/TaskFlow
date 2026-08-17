@@ -31,7 +31,7 @@ import FontAwesome6 from '@react-native-vector-icons/fontawesome6/static';
 
 import {
   useTheme,
-} from '../../../theme/ThemeProvider';
+} from '../../../app/providers/ThemeProvider';
 
 
 export function SettingsScreen() {

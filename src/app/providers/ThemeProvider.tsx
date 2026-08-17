@@ -5,8 +5,8 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import { lightTheme } from './lightTheme';
-import { darkTheme } from './darkTheme';
+import { lightTheme } from '../../theme/lightTheme';
+import { darkTheme } from '../../theme/darkTheme';
 
 
 

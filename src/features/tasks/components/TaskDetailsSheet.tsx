@@ -21,7 +21,7 @@ import type {
 
 import {
   useTheme,
-} from '../../../theme/ThemeProvider';
+} from '../../../app/providers/ThemeProvider';
 
 import {
   spacing,
