@@ -52,7 +52,7 @@ It demonstrates authentication, task management, offline-first SQLite persistenc
 
 ## Architecture
 
-
+```text
                     ┌──────────────────┐
                     │   React Native   │
                     │       UI         │
@@ -92,6 +92,8 @@ It demonstrates authentication, task management, offline-first SQLite persistenc
      │ Firebase         │
      │   Firestore      │
      └──────────────────┘
+```
+
 
 ### Folder Structure
 
@@ -243,7 +245,49 @@ User → Task Form → Feature/Redux → Task Repository → SQLite
 User → Task Form → Feature/Redux → Task Repository
      → SQLite → Pending Sync Queue → Local UI state
 ```
+### Offline Synchronization
 
+```text
+                    ┌─────────────────┐
+                    │   User Action   │
+                    └────────┬────────┘
+                             │
+                    ┌────────▼────────┐
+                    │ Task Repository │
+                    └────────┬────────┘
+                             │
+                    ┌────────▼────────┐
+                    │     SQLite      │
+                    │ Local Database  │
+                    └────────┬────────┘
+                             │
+                    ┌────────▼────────┐
+                    │ Sync Repository │
+                    │ Pending Queue   │
+                    └────────┬────────┘
+                             │
+                    ┌────────▼────────┐
+                    │ Network         │
+                    │ Available?      │
+                    └───────┬─────────┘
+                         No │       │ Yes
+                            │       │
+                  ┌─────────▼──┐ ┌──▼────────────┐
+                  │ Keep       │ │ Sync to       │
+                  │ Pending    │ │ Firestore     │
+                  └─────┬──────┘ └──────┬────────┘
+                        │               │
+                        │        ┌──────▼──────┐
+                        │        │ Mark Synced │
+                        │        └──────┬───────┘
+                        │               │
+                        └───────┬───────┘
+                                │
+                       ┌────────▼────────┐
+                       │  Synchronized   │
+                       │      State      │
+                       └─────────────────┘
+```
 ### Reconnection
 
 ```text
