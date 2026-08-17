@@ -18,6 +18,8 @@ import {
   getFirestore,
 } from 'firebase/firestore';
 
+import {env} from './env';
+
 
 /* ================================================= */
 /* REACT NATIVE PERSISTENCE                          */
@@ -50,13 +52,15 @@ const {
 /* ================================================= */
 
 const firebaseConfig = {
-  apiKey: 'AIzaSyBoOjhdfssDftAY73ekIVel3irdUVdXXWA',
-  authDomain: 'taskflow-feac9.firebaseapp.com',
-  projectId: 'taskflow-feac9',
-  storageBucket: 'taskflow-feac9.firebasestorage.app',
-  messagingSenderId: '135695161045',
-  appId: '1:135695161045:web:dc4b217758688f40fff45c',
+  apiKey: env.firebase.apiKey,
+  authDomain: env.firebase.authDomain,
+  projectId: env.firebase.projectId,
+  storageBucket: env.firebase.storageBucket,
+  messagingSenderId:
+    env.firebase.messagingSenderId,
+  appId: env.firebase.appId,
 };
+
 
 /* ================================================= */
 /* FIREBASE APP                                      */
@@ -78,28 +82,10 @@ const appStorage =
   createAsyncStorage('taskflow');
 
 
-/*
- * IMPORTANT:
- *
- * Explicitly tell TypeScript that this
- * variable is Firebase Auth.
- *
- * Without this annotation:
- *
- *     let firebaseAuth;
- *
- * TypeScript treats it as implicit `any`.
- */
 let firebaseAuth: Auth;
 
 
 try {
-  /*
-   * First app load:
-   *
-   * Initialize Firebase Auth with
-   * React Native AsyncStorage persistence.
-   */
   firebaseAuth =
     initializeAuth(
       firebaseApp,
@@ -111,14 +97,6 @@ try {
       },
     );
 } catch (error) {
-  /*
-   * During React Native Fast Refresh,
-   * Firebase Auth may already have been
-   * initialized.
-   *
-   * In that situation, reuse the existing
-   * Auth instance.
-   */
   if (
     error &&
     typeof error === 'object' &&

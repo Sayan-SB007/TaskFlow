@@ -1,14 +1,21 @@
-import React, { useEffect } from 'react';
+import React, {useEffect} from 'react';
+
+import {
+  NavigationContainer,
+} from '@react-navigation/native';
+
+import BootSplash from 'react-native-bootsplash';
 
 import {AppProviders} from './src/app/providers/AppProviders';
+
 import {RootNavigator} from './src/navigation/RootNavigator';
-import { initializeNotifications } from './src/features/notifications/notificationService';
+
+import {
+  initializeNotifications,
+} from './src/features/notifications/notificationService';
 
 
 function App() {
-  useEffect(() => {
-  void initializeNotifications();
-}, []);
 
   useEffect(() => {
 
@@ -34,12 +41,30 @@ function App() {
 
   }, []);
 
-  
+
   return (
+
     <AppProviders>
-      <RootNavigator />
+
+      <NavigationContainer
+        onReady={() => {
+
+          BootSplash.hide({
+            fade: true,
+          });
+
+        }}
+      >
+
+        <RootNavigator />
+
+      </NavigationContainer>
+
     </AppProviders>
+
   );
+
 }
+
 
 export default App;

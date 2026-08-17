@@ -9,10 +9,6 @@ import {
 } from 'react-native';
 
 import {
-  NavigationContainer,
-} from '@react-navigation/native';
-
-import {
   useAppDispatch,
 } from '../hooks/useAppDispatch';
 
@@ -48,10 +44,8 @@ import {
 import {
   startSyncListener,
 } from '../features/sync/syncService';
-
-import {
-  SyncStatusBanner,
-} from '../features/sync/SyncStatusBanner';
+import { NavigationContainer } from '@react-navigation/native';
+import { SyncStatusBanner } from '../features/sync/SyncStatusBanner';
 
 
 export function RootNavigator() {
@@ -159,44 +153,17 @@ export function RootNavigator() {
   /* NAVIGATION                                        */
   /* ================================================= */
 
-  return (
-    <View
-      style={
-        styles.root
-      }>
+return (
+  <View style={styles.root}>
+    <SyncStatusBanner />
 
-      {/* ============================================= */}
-      {/* SYNC STATUS                                   */}
-      {/* ============================================= */}
-
-      {isAuthenticated && (
-        <SyncStatusBanner />
-      )}
-
-
-      {/* ============================================= */}
-      {/* NAVIGATION                                    */}
-      {/* ============================================= */}
-
-      <View
-        style={
-          styles.navigation
-        }>
-
-        <NavigationContainer>
-
-          {isAuthenticated ? (
-            <AppNavigator />
-          ) : (
-            <AuthNavigator />
-          )}
-
-        </NavigationContainer>
-
-      </View>
-
-    </View>
-  );
+    {isAuthenticated ? (
+      <AppNavigator />
+    ) : (
+      <AuthNavigator />
+    )}
+  </View>
+);
 }
 
 
@@ -211,11 +178,6 @@ const styles = StyleSheet.create({
 
     backgroundColor:
       lightTheme.colors.background,
-  },
-
-
-  navigation: {
-    flex: 1,
   },
 
 
