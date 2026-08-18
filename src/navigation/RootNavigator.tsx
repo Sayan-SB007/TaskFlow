@@ -44,8 +44,14 @@ import {
 import {
   startSyncListener,
 } from '../features/sync/syncService';
-import { NavigationContainer } from '@react-navigation/native';
-import { SyncStatusBanner } from '../features/sync/SyncStatusBanner';
+
+import {
+  SyncStatusBanner,
+} from '../features/sync/SyncStatusBanner';
+
+import {
+  refreshTasks,
+} from '../features/tasks/taskSlice';
 
 
 export function RootNavigator() {
@@ -73,39 +79,50 @@ export function RootNavigator() {
   useEffect(() => {
 
     const unsubscribe =
-      authService.subscribe(user => {
+      authService.subscribe(
+        user => {
 
-        dispatch(
-          authStateChanged(
-            user
-              ? {
-                  id: user.uid,
+          dispatch(
+            authStateChanged(
+              user
+                ? {
+                    id:
+                      user.uid,
 
-                  email:
-                    user.email,
+                    email:
+                      user.email,
 
-                  displayName:
-                    user.displayName,
-                }
-              : null,
-          ),
-        );
-
-      });
+                    displayName:
+                      user.displayName,
+                  }
+                : null,
+            ),
+          );
+        },
+      );
 
 
     return unsubscribe;
 
-  }, [dispatch]);
+  }, [
+    dispatch,
+  ]);
 
 
   /* ================================================= */
-  /* FIRESTORE SYNC LISTENER                           */
+  /* TASK / FIRESTORE SYNC LISTENER                   */
   /* ================================================= */
 
   useEffect(() => {
 
-    if (!isAuthenticated) {
+    /*
+     * Do not start synchronization when
+     * the user is logged out.
+     */
+    if (
+      !isAuthenticated
+    ) {
+
       return;
     }
 
@@ -115,26 +132,70 @@ export function RootNavigator() {
     );
 
 
+    /*
+     * IMPORTANT:
+     *
+     * When the initial Firestore sync finishes,
+     * or when connectivity returns, refresh Redux
+     * from SQLite.
+     *
+     * This fixes:
+     *
+     * Firebase = 5 tasks
+     * SQLite initially = 0
+     * Redux initially = 0
+     *
+     * After sync:
+     *
+     * Firestore
+     *    ↓
+     * SQLite = 5
+     *    ↓
+     * refreshTasks()
+     *    ↓
+     * Redux = 5
+     *    ↓
+     * UI = 5
+     */
     const unsubscribe =
-      startSyncListener();
+      startSyncListener(
+        () => {
+
+          console.log(
+            'SYNC: Refreshing Redux from SQLite...',
+          );
+
+
+          void dispatch(
+            refreshTasks(),
+          );
+
+        },
+      );
 
 
     return unsubscribe;
 
-  }, [isAuthenticated]);
+  }, [
+    isAuthenticated,
+    dispatch,
+  ]);
 
 
   /* ================================================= */
   /* AUTH INITIALIZATION                               */
   /* ================================================= */
 
-  if (!initialized) {
+  if (
+    !initialized
+  ) {
 
     return (
       <View
         style={
           styles.loadingContainer
-        }>
+        }
+      >
 
         <ActivityIndicator
           size="large"
@@ -145,7 +206,6 @@ export function RootNavigator() {
 
       </View>
     );
-
   }
 
 
@@ -153,17 +213,36 @@ export function RootNavigator() {
   /* NAVIGATION                                        */
   /* ================================================= */
 
-return (
-  <View style={styles.root}>
-    <SyncStatusBanner />
+  return (
+    <View
+      style={
+        styles.root
+      }
+    >
 
-    {isAuthenticated ? (
-      <AppNavigator />
-    ) : (
-      <AuthNavigator />
-    )}
-  </View>
-);
+      {/* ================================================= */}
+      {/* SYNC STATUS                                       */}
+      {/* ================================================= */}
+
+      <SyncStatusBanner />
+
+
+      {/* ================================================= */}
+      {/* AUTH / APP NAVIGATION                             */}
+      {/* ================================================= */}
+
+      {isAuthenticated ? (
+
+        <AppNavigator />
+
+      ) : (
+
+        <AuthNavigator />
+
+      )}
+
+    </View>
+  );
 }
 
 
@@ -171,25 +250,29 @@ return (
 /* STYLES                                            */
 /* ================================================= */
 
-const styles = StyleSheet.create({
+const styles =
+  StyleSheet.create({
 
-  root: {
-    flex: 1,
+    root: {
 
-    backgroundColor:
-      lightTheme.colors.background,
-  },
+      flex: 1,
+
+      backgroundColor:
+        lightTheme.colors.background,
+    },
 
 
-  loadingContainer: {
-    flex: 1,
+    loadingContainer: {
 
-    alignItems: 'center',
+      flex: 1,
 
-    justifyContent: 'center',
+      alignItems:
+        'center',
 
-    backgroundColor:
-      lightTheme.colors.background,
-  },
+      justifyContent:
+        'center',
 
-});
+      backgroundColor:
+        lightTheme.colors.background,
+    },
+  });

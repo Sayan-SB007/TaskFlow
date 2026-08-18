@@ -50,14 +50,64 @@ export function SyncStatusBanner() {
 
 
           /*
-           * IMPORTANT STATES
+           * =========================================
+           * OFFLINE
+           * =========================================
            *
-           * Offline / syncing / error
-           * should remain visible.
+           * Always show when the device is offline.
+           *
+           * This is useful because the user needs
+           * to know that changes are waiting.
            */
           if (
-            state.status === 'offline' ||
-            state.status === 'syncing' ||
+            state.status === 'offline'
+          ) {
+
+            setVisible(true);
+
+            return;
+          }
+
+
+          /*
+           * =========================================
+           * SYNCING
+           * =========================================
+           *
+           * Only show syncing when syncService
+           * explicitly provides a user-facing message.
+           *
+           * Normal online background sync uses:
+           *
+           * status: 'syncing'
+           * message: undefined
+           *
+           * Therefore it remains completely silent.
+           *
+           * Reconnection sync uses:
+           *
+           * status: 'syncing'
+           * message: 'Syncing your changes...'
+           *
+           * Therefore it WILL be shown.
+           */
+          if (
+            state.status === 'syncing' &&
+            !!state.message
+          ) {
+
+            setVisible(true);
+
+            return;
+          }
+
+
+          /*
+           * =========================================
+           * ERROR
+           * =========================================
+           */
+          if (
             state.status === 'error'
           ) {
 
@@ -68,14 +118,23 @@ export function SyncStatusBanner() {
 
 
           /*
-           * Successful sync
+           * =========================================
+           * SUCCESS
+           * =========================================
            *
-           * Show it briefly so the user knows
-           * that offline changes were uploaded.
+           * Only show successful synchronization when
+           * syncService explicitly provides a message.
+           *
+           * Normal background sync has:
+           *
+           * message: undefined
+           *
+           * so it remains silent.
            */
           if (
             state.status === 'synced' &&
-            state.pendingCount === 0
+            state.pendingCount === 0 &&
+            !!state.message
           ) {
 
             setVisible(true);
@@ -97,6 +156,9 @@ export function SyncStatusBanner() {
           }
 
 
+          /*
+           * Everything else is silent.
+           */
           setVisible(false);
 
         },
@@ -117,8 +179,18 @@ export function SyncStatusBanner() {
     syncState.status === 'offline';
 
 
+  /*
+   * IMPORTANT:
+   *
+   * A normal background sync has status "syncing"
+   * but message === undefined.
+   *
+   * That state never reaches the visible banner
+   * because of the condition above.
+   */
   const isSyncing =
-    syncState.status === 'syncing';
+    syncState.status === 'syncing' &&
+    !!syncState.message;
 
 
   const isError =
@@ -166,6 +238,9 @@ export function SyncStatusBanner() {
     'Your changes are saved locally.';
 
 
+  /*
+   * OFFLINE
+   */
   if (
     isOffline &&
     syncState.pendingCount > 0
@@ -181,6 +256,9 @@ export function SyncStatusBanner() {
   }
 
 
+  /*
+   * RECONNECTION / VISIBLE SYNC
+   */
   if (isSyncing) {
 
     message =
@@ -190,14 +268,19 @@ export function SyncStatusBanner() {
               ? ''
               : 's'
           }...`
-        : 'Updating your tasks...';
+        : syncState.message ??
+          'Updating your tasks...';
 
   }
 
 
+  /*
+   * SUCCESS
+   */
   if (isSynced) {
 
     message =
+      syncState.message ??
       'Everything is up to date.';
 
   }
@@ -336,12 +419,8 @@ const statusBarHeight =
 
 const styles = StyleSheet.create({
 
-  /*
-   * This is the most important fix.
-   *
-   * The banner starts AFTER Android's status bar.
-   */
   statusArea: {
+
     paddingTop:
       Platform.OS === 'android'
         ? statusBarHeight
@@ -355,10 +434,8 @@ const styles = StyleSheet.create({
   },
 
 
-  /*
-   * Actual banner card.
-   */
   banner: {
+
     minHeight: 54,
 
     borderRadius: 14,
@@ -377,7 +454,6 @@ const styles = StyleSheet.create({
 
     shadowOffset: {
       width: 0,
-
       height: 1,
     },
 
@@ -444,6 +520,7 @@ const styles = StyleSheet.create({
   /* ================================================= */
 
   iconCircle: {
+
     width: 34,
 
     height: 34,
@@ -479,6 +556,7 @@ const styles = StyleSheet.create({
 
 
   icon: {
+
     fontSize: 17,
 
     fontWeight: '800',
@@ -510,6 +588,7 @@ const styles = StyleSheet.create({
   /* ================================================= */
 
   textContainer: {
+
     flex: 1,
 
     justifyContent: 'center',
@@ -517,6 +596,7 @@ const styles = StyleSheet.create({
 
 
   title: {
+
     fontSize: 13,
 
     lineHeight: 18,
@@ -528,6 +608,7 @@ const styles = StyleSheet.create({
 
 
   message: {
+
     marginTop: 1,
 
     fontSize: 11,

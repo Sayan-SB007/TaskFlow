@@ -1,10 +1,12 @@
-# TaskFlow — Architecture
+# TaskFlow --- Architecture
 
 ## 1. Architecture Overview
 
-TaskFlow follows a modular React Native architecture with clear separation between presentation, navigation, feature logic, state, services, persistence, synchronization and remote infrastructure.
+TaskFlow follows a modular React Native architecture with separation
+between presentation, navigation, feature logic, state, services,
+persistence, synchronization, and remote infrastructure.
 
-```text
+``` text
 UI
  ↓
 Navigation / Screens
@@ -23,13 +25,28 @@ Sync Layer
  ↓
 Firebase Firestore
 ```
-
 Authentication is handled by Firebase Authentication. Connectivity is handled separately so synchronization can react to online/offline transitions.
+
+------------------------------------------------------------------------
+
+The task architecture follows a local-first approach:
+
+``` text
+Local write first
+      ↓
+Immediate UI update
+      ↓
+Background synchronization
+      ↓
+Remote synchronization
+```
+
+------------------------------------------------------------------------
 
 ## 2. Technology Stack
 
- Area                  Technology
-  --------------------- ------------------------------------------------------
+  Area                  Technology
+  --------------------- ------------------------------------------
   Mobile framework      React Native
   Language              TypeScript
   State management      Redux Toolkit
@@ -42,11 +59,14 @@ Authentication is handled by Firebase Authentication. Connectivity is handled se
   Icons                 React Native icon package/family used by the project
   Notifications         Local notification library
   Build platforms       Android / iOS
-The assignment expects Redux Toolkit, React Navigation, SQLite/Realm-style local persistence, Firebase Authentication, Firestore synchronization, notifications, theming, multi-environment configuration, FlatList optimization and lazy loading.
 
-## 3. Current Folder Structure
 
-```text
+The Project expects Redux Toolkit, React Navigation, SQLite/Realm-style local persistence, Firebase Authentication, Firestore synchronization, notifications, theming, multi-environment configuration, FlatList optimization and lazy loading.
+------------------------------------------------------------------------
+
+## 3. Folder Structure
+
+``` text
 TaskFlow/
 ├── .vscode/
 ├── android/
@@ -58,16 +78,9 @@ TaskFlow/
 │   │   ├── appSlice.ts
 │   │   └── store.ts
 │   ├── components/
-│   │   ├── Button/
-│   │   ├── ErrorState/
-│   │   ├── Input/
-│   │   ├── Loading/
-│   │   ├── OfflineBanner/
-│   │   └── Screen/
 │   ├── config/
 │   ├── database/
 │   │   ├── migrations/
-│   │   │   └── v1.ts
 │   │   ├── repositories/
 │   │   │   ├── syncRepository.ts
 │   │   │   └── taskRepository.ts
@@ -86,13 +99,10 @@ TaskFlow/
 │   └── utils/
 ├── App.tsx
 ├── package.json
-├── .gitignore
 └── README.md
 ```
 
-### Why this structure works
-
-`src/features/` contains domain-specific functionality.
+------------------------------------------------------------------------
 
 `src/components/` contains reusable UI components.
 
@@ -106,12 +116,9 @@ TaskFlow/
 
 `src/app/` contains application-wide Redux/store/provider setup.
 A root `src/services/` directory may be added only if shared infrastructure services become numerous enough to justify it. Existing feature-local services can remain inside their feature.
-
 ## 4. Tasks Feature Architecture
 
-The original TasksScreen grew to several thousand lines. It has been refactored without removing existing functionality.
-
-```text
+``` text
 features/tasks/
 ├── components/
 │   ├── TaskCard.tsx
@@ -130,73 +137,315 @@ features/tasks/
     └── taskDateUtils.ts
 ```
 
-`TasksScreen` is the orchestration layer for Redux selectors/actions, active filters, selected task, modal visibility, CRUD callbacks and completion state.
+The original large `TasksScreen` was decomposed into focused components
+while preserving functionality.
 
-Focused components own presentation and local UI concerns.
+------------------------------------------------------------------------
 
-## 5. Task Data Flow
+# 5. Complete Task Data Flow
 
-### Online
+TaskFlow uses a local-first task architecture. The UI does not
+communicate directly with SQLite or Firestore.
 
-```text
-User
+``` text
+                         USER ACTION
+                              │
+                              ▼
+                       Redux Thunk
+                              │
+                              ▼
+                        TaskService
+                              │
+                              ▼
+                      TaskRepository
+                              │
+                              ▼
+                           SQLite
+                              │
+                    ┌─────────┴─────────┐
+                    │                   │
+                    ▼                   ▼
+                Redux/UI        Pending Operation
+                immediately             │
+                                       ▼
+                              Sync Scheduler
+                                (~400ms)
+                                       │
+                              ┌────────┴────────┐
+                              │                 │
+                           Offline           Online
+                              │                 │
+                              ▼                 ▼
+                       Keep Pending       Background
+                          Queue              Sync
+                              │                 │
+                              │                 ▼
+                              │             Firestore
+                              │                 │
+                              │                 ▼
+                              │              SQLite
+                              │                 │
+                              │                 ▼
+                              │          refreshTasks()
+                              │                 │
+                              └─────────────────┴──────► Redux/UI
+```
+
+This is the primary task lifecycle.
+
+------------------------------------------------------------------------
+
+# 6. Local Write Architecture
+
+Every task mutation follows:
+
+``` text
+User Action
  ↓
-Task Form
+Redux Thunk
  ↓
-Redux / Task Action
+TaskService
  ↓
-Task Repository
+TaskRepository
  ↓
 SQLite
+```
+
+SQLite is the first durable persistence layer.
+
+The UI does not wait for Firestore before reflecting the user's change.
+
+------------------------------------------------------------------------
+
+# 7. Redux Update
+
+After the local operation succeeds:
+
+``` text
+SQLite
  ↓
-Sync Queue
+Redux
+ ↓
+UI
+```
+
+Conceptually:
+
+``` text
+Redux
+  = Runtime / UI state
+
+SQLite
+  = Durable local state
+
+Firestore
+  = Remote synchronized state
+```
+
+------------------------------------------------------------------------
+
+# 8. Synchronization Scheduler
+
+After a successful local mutation, the synchronization service schedules
+a background synchronization cycle.
+
+``` text
+Create
+Edit
+Toggle
+Delete
+   ↓
+~400ms debounce
+   ↓
+One background synchronization cycle
+```
+
+The debounce prevents closely-spaced operations from unnecessarily
+triggering separate synchronization cycles.
+
+------------------------------------------------------------------------
+
+# 9. Online Synchronization
+
+``` text
+Pending Operations
+ ↓
+Sync Service
  ↓
 Firestore
  ↓
-Synced state
+Mark synchronized
 ```
 
-### Offline
+Normal online synchronization is silent.
 
-```text
-User
- ↓
-Task Form
- ↓
-Redux / Task Action
- ↓
-Task Repository
+The application does not display a sync banner for every online CRUD
+operation.
+
+------------------------------------------------------------------------
+
+# 10. Offline Synchronization
+
+``` text
+Local Mutation
  ↓
 SQLite
  ↓
-Pending Sync Queue
+Pending Operation
  ↓
-Local UI state
+Wait for Network
+```
+
+The user can continue creating, editing, completing, and deleting tasks
+while offline.
+
+Example:
+
+``` text
+Create Task A
+Edit Task B
+Complete Task C
+Delete Task D
+        ↓
+4 pending operations
+        ↓
+SQLite
+```
+
+------------------------------------------------------------------------
+
+# 11. Reconnection Flow
+
+NetInfo detects when connectivity becomes available.
+
+``` text
+Network becomes available
+        ↓
+NetInfo
+        ↓
+Sync Service
+        ↓
+Read pending operations
+        ↓
+Firestore write/delete
+        ↓
+Mark synchronized
+        ↓
+Pull remote task state
+        ↓
+SQLite
+        ↓
+refreshTasks()
+        ↓
+Redux
+        ↓
+UI
+```
+
+Visible status during reconnection:
+
+``` text
+Back online · Syncing...
+        ↓
+All changes synced
+```
+
+------------------------------------------------------------------------
+
+# 12. Initial Data Hydration
+
+``` text
+User Login
+    ↓
+Firebase Authentication
+    ↓
+Initial Sync
+    ↓
+Firestore
+    ↓
+SQLite
+    ↓
+refreshTasks()
+    ↓
+Redux
+    ↓
+Task UI
+```
+
+This ensures remote tasks synchronized into SQLite are also reflected in
+Redux immediately.
+
+------------------------------------------------------------------------
+
+# 13. Synchronization UI Behavior
+
+### Normal Online Operation
+
+``` text
+User changes task
+ ↓
+SQLite
+ ↓
+Redux/UI
+ ↓
+Background Firestore sync
+```
+
+No banner.
+
+### Offline
+
+``` text
+Task changes
+ ↓
+Pending queue
+ ↓
+"3 unsynced changes"
 ```
 
 ### Reconnection
 
-```text
-Network becomes available
+``` text
+Network restored
  ↓
-NetInfo event
+"Syncing changes..."
  ↓
-Sync service
- ↓
-Read pending operations
- ↓
-Firestore write/delete
- ↓
-Mark synchronized
- ↓
-Refresh local state
+"All changes synced"
 ```
 
-UI components should not execute raw SQLite or Firestore operations.
+------------------------------------------------------------------------
 
-## 6. Authentication Flow
+# 14. Synchronization Responsibility
 
-```text
+``` text
+TasksScreen
+    ↓
+Task UI / Redux actions
+
+TaskService
+    ↓
+Task business/application operations
+
+TaskRepository
+    ↓
+SQLite persistence
+
+SyncService
+    ↓
+Connectivity + synchronization orchestration
+
+Firestore
+    ↓
+Remote persistence
+```
+
+UI components do not execute raw SQLite or Firestore operations.
+
+------------------------------------------------------------------------
+
+# 15. Authentication Flow
+
+``` text
 App
  ↓
 Firebase Auth session check
@@ -204,22 +453,23 @@ Firebase Auth session check
  └── Session → AppNavigator → Tasks / Settings
 ```
 
-Authentication uses the existing auth feature/service/state and Firebase Authentication.
+An `AuthProvider.tsx` is not required merely for architectural
+appearance.
 
-An `AuthProvider.tsx` is not required merely to make the architecture appear more complex.
+------------------------------------------------------------------------
 
-## 7. Firestore Structure
+# 16. Firestore Structure
 
-```text
+``` text
 users/
   {userId}/
     tasks/
       {taskId}
 ```
 
-Recommended rule:
+Recommended ownership rule:
 
-```text
+``` text
 rules_version = '2';
 
 service cloud.firestore {
@@ -232,13 +482,11 @@ service cloud.firestore {
 }
 ```
 
-The authenticated UID is the ownership boundary.
+------------------------------------------------------------------------
 
-## 8. Database Architecture
+# 17. Database Architecture
 
-The existing SQLite layer already provides a repository boundary:
-
-```text
+``` text
 database/
 ├── migrations/
 │   └── v1.ts
@@ -249,74 +497,89 @@ database/
 └── debug.ts
 ```
 
-### `sqlite.ts`
-SQLite connection/setup and low-level database access.
+Responsibilities:
 
-### `migrations/`
-Schema/version changes.
+-   `sqlite.ts` --- SQLite initialization and low-level access.
+-   `migrations/` --- database schema/version changes.
+-   `taskRepository.ts` --- task persistence.
+-   `syncRepository.ts` --- synchronization persistence.
+-   `debug.ts` --- database debugging.
 
-### `taskRepository.ts`
-Task persistence operations.
+Screens/components do not contain raw SQLite queries.
 
-### `syncRepository.ts`
-Persistence for pending synchronization operations.
+------------------------------------------------------------------------
 
-### `debug.ts`
-Database debugging/development support.
+# 18. Redux Toolkit
 
-Screens/components must not contain raw SQLite queries:
-
-```text
-Feature → Repository → SQLite
-```
-
-No artificial database restructuring is required.
-
-## 9. Redux Toolkit
-
-Redux Toolkit manages application/feature state.
-
-```text
+``` text
 Component
  ↓
-Redux action
+Redux Action / Thunk
  ↓
-Feature/reducer logic
+Feature Logic
  ↓
-State update
+Redux State
+ ↓
+Component
 ```
 
-Redux is not the durable database:
+Redux is runtime state, not the durable database.
 
-```text
-Redux → runtime/application state
-SQLite → durable local persistence
-Firestore → remote synchronized state
+``` text
+Redux → Runtime state
+SQLite → Durable local state
+Firestore → Remote synchronized state
 ```
 
-## 10. Synchronization
+------------------------------------------------------------------------
 
-NetInfo detects connectivity changes:
+# 19. Repository Pattern
 
-```text
+``` text
+TaskService
+     ↓
+TaskRepository
+     ↓
+SQLite
+```
+
+Synchronization:
+
+``` text
+SyncService
+     ↓
+SyncRepository
+     ↓
+SQLite
+```
+
+This keeps persistence details outside screens and components.
+
+------------------------------------------------------------------------
+
+# 20. Synchronization Layer
+
+``` text
 NetInfo
  ↓
 Online/offline transition
  ↓
-Sync feature/service
- ↓
-Sync repository
+Sync Service
  ↓
 Pending operations
  ↓
 Firestore
 ```
 
-Failed synchronization operations must not be silently discarded; they should remain available for retry.
+The synchronization service owns orchestration.
 
-## 11. Navigation
+Repositories own persistence.
 
-```text
+------------------------------------------------------------------------
+
+# 21. Navigation
+
+``` text
 RootNavigator
 ├── AuthNavigator
 │   ├── Login
@@ -326,108 +589,152 @@ RootNavigator
     └── Settings
 ```
 
-Authentication state determines the active navigation flow.
+------------------------------------------------------------------------
 
-## 12. Notifications
+# 22. Notifications
 
-Current notification architecture focuses on local task reminders:
-
-```text
-Task due/reminder data
+``` text
+Task
  ↓
-Notification feature
+Due Date / Reminder
  ↓
-Local notification scheduling
+Notification Feature
  ↓
-Device notification
+Local Notification
+ ↓
+Device
 ```
 
-The Tasks UI separately exposes today's reminders/notification state.
+Firebase Cloud Messaging/server push remains a future enhancement.
 
-Firebase Cloud Messaging/server push remains a bonus/future enhancement.
+------------------------------------------------------------------------
 
-## 13. Theme
+# 23. Theme
 
-```text
+``` text
 src/theme/
-├── colors.ts
-├── darkTheme.ts
 ├── lightTheme.ts
+├── darkTheme.ts
 ├── ThemeProvider.tsx
+├── colors.ts
 ├── shadows.ts
 ├── spacing.ts
 └── typography.ts
 ```
 
-Settings controls the user's theme preference.
+Components consume the active theme:
 
-Components should consume the active theme:
-
-```tsx
-const {theme} = useTheme();
+``` tsx
+const { theme } = useTheme();
 ```
 
-rather than importing `lightTheme` directly.
+------------------------------------------------------------------------
 
-## 14. Performance
+# 24. Performance
 
 Current performance-oriented decisions:
 
-- `FlatList` for task collections.
-- Stable task keys.
-- Focused task row components.
-- Memoization where useful.
-- Lazy loading where applicable.
-- Synchronization outside render paths.
-- Local persistence to avoid unnecessary repeated remote reads.
-- Component extraction from the original large TasksScreen.
+-   `FlatList`
+-   Stable task keys
+-   Focused task-row components
+-   Memoization where useful
+-   Lazy loading where applicable
+-   SQLite-first updates
+-   Debounced background synchronization
+-   Synchronization outside render paths
+-   Modular task components
 
-Optimization should remain evidence-driven rather than adding unnecessary abstraction.
+------------------------------------------------------------------------
 
-## 15. Security
+# 25. Security
 
-- Firebase Authentication controls identity.
-- Firestore access is user-scoped.
-- `request.auth.uid` enforces ownership.
-- Secrets must not be committed.
-- Real `.env` files remain ignored.
-- Client Firebase configuration is not a substitute for Firestore security rules.
+-   Firebase Authentication controls identity.
+-   Firestore access is user-scoped.
+-   `request.auth.uid` enforces ownership.
+-   Secrets must not be committed.
+-   Real `.env` files remain ignored.
+-   Firebase client configuration is not an authorization boundary.
+-   Firestore rules enforce access control.
 
-## 16. Multi-environment Configuration
+------------------------------------------------------------------------
 
-The assignment expects development, staging and production configuration.
+# 26. Multi-environment Configuration
 
-Recommended sample files:
+Supported environments:
 
-```text
+``` text
+Development
+Staging
+Production
+```
+
+Sample files:
+
+``` text
 .env.example
 .env.development.example
 .env.staging.example
 .env.production.example
 ```
 
-The exact environment-loading mechanism is implementation-specific. Environment-specific values must not be hard-coded into feature components.
+Example:
 
-## 17. Architectural Decisions
+``` env
+APP_ENV=development
 
-### Existing database structure is retained
-The current migrations, repositories, SQLite connection and debug utilities already form a useful persistence boundary.
+FIREBASE_API_KEY=
+FIREBASE_AUTH_DOMAIN=
+FIREBASE_PROJECT_ID=
+FIREBASE_STORAGE_BUCKET=
+FIREBASE_MESSAGING_SENDER_ID=
+FIREBASE_APP_ID=
+```
 
-### No artificial AuthProvider
-The existing authentication feature/state/navigation flow is sufficient.
+------------------------------------------------------------------------
 
-### Tasks remain modular
-The large TasksScreen is split into focused components while preserving functionality.
+# 27. Architectural Decisions
 
-### Infrastructure stays out of UI
-Screens coordinate features; they should not contain raw SQLite, Firestore or synchronization logic.
+## Local-first task persistence
 
-### Abstractions must have responsibility
-Folders/services should exist because they own a real responsibility, not simply to make the architecture diagram look more enterprise-like.
+Task changes are persisted locally before remote synchronization.
 
-## 18. Target Architecture
+## Immediate UI updates
 
-```text
+SQLite and Redux allow task changes to appear immediately.
+
+## Background synchronization
+
+Firestore synchronization happens independently from the immediate UI
+operation.
+
+## Debounced synchronization
+
+Closely-spaced task changes are grouped into a synchronization cycle.
+
+## Silent online synchronization
+
+Normal online background synchronization does not display a banner for
+every task operation.
+
+## Visible offline recovery
+
+Offline/reconnection synchronization can surface useful status
+information.
+
+## Repository boundary
+
+Database implementation details remain behind repositories.
+
+## Modular tasks feature
+
+The large `TasksScreen` is decomposed into focused components while
+preserving functionality.
+
+------------------------------------------------------------------------
+
+# 28. Target Architecture
+
+``` text
                  ┌──────────────────────┐
                  │    React Native UI   │
                  └──────────┬───────────┘
@@ -464,3 +771,81 @@ Folders/services should exist because they own a real responsibility, not simply
                  │ Firebase Firestore   │
                  └──────────────────────┘
 ```
+
+------------------------------------------------------------------------
+
+# 29. End-to-End Architecture Flow
+
+``` text
+                    ┌───────────────────┐
+                    │       USER        │
+                    └─────────┬─────────┘
+                              │
+                              ▼
+                    ┌───────────────────┐
+                    │ React Native UI   │
+                    └─────────┬─────────┘
+                              │
+                              ▼
+                    ┌───────────────────┐
+                    │   Redux Thunk     │
+                    └─────────┬─────────┘
+                              │
+                              ▼
+                    ┌───────────────────┐
+                    │   TaskService     │
+                    └─────────┬─────────┘
+                              │
+                              ▼
+                    ┌───────────────────┐
+                    │ TaskRepository    │
+                    └─────────┬─────────┘
+                              │
+                              ▼
+                    ┌───────────────────┐
+                    │      SQLite       │
+                    └─────────┬─────────┘
+                              │
+                ┌─────────────┴─────────────┐
+                │                           │
+                ▼                           ▼
+        ┌───────────────┐          ┌────────────────┐
+        │   Redux/UI    │          │ Pending Queue  │
+        │   Immediate   │          └───────┬────────┘
+        └───────────────┘                  │
+                                           ▼
+                                  ┌────────────────┐
+                                  │ Sync Scheduler │
+                                  │    ~400ms      │
+                                  └───────┬────────┘
+                                          │
+                              ┌───────────┴───────────┐
+                              │                       │
+                           Offline                 Online
+                              │                       │
+                              ▼                       ▼
+                       ┌────────────┐         ┌────────────┐
+                       │   Keep     │         │ Background │
+                       │  Pending   │         │    Sync    │
+                       └─────┬──────┘         └─────┬──────┘
+                             │                      │
+                             │                      ▼
+                             │               ┌────────────┐
+                             │               │ Firestore  │
+                             │               └─────┬──────┘
+                             │                     │
+                             │                     ▼
+                             │               ┌────────────┐
+                             │               │   SQLite   │
+                             │               └─────┬──────┘
+                             │                     │
+                             │                     ▼
+                             │              ┌─────────────┐
+                             │              │refreshTasks │
+                             │              └──────┬──────┘
+                             │                     │
+                             └─────────────────────┴────────► Redux/UI
+```
+
+This represents the complete local-first, offline-capable
+synchronization architecture used by TaskFlow.

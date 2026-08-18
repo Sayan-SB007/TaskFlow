@@ -13,12 +13,13 @@ import {
   firestoreDb,
 } from '../../config/firebase';
 
-
-
 import type {
   Task,
 } from '../tasks/types';
-import { taskRepository } from '../../database/repositories/taskRepository';
+
+import {
+  taskRepository,
+} from '../../database/repositories/taskRepository';
 
 
 /* ================================================= */
@@ -61,17 +62,13 @@ const syncStatusListeners =
 
 
 function notifySyncStatus() {
-
   const state = {
     ...syncStatus,
   };
 
-
   syncStatusListeners.forEach(
     listener => {
-
       listener(state);
-
     },
   );
 }
@@ -91,22 +88,18 @@ export function subscribeSyncStatus(
     listener,
   );
 
-
   /*
-   * Give the subscriber the
-   * current state immediately.
+   * Immediately provide the
+   * current state to the subscriber.
    */
   listener({
     ...syncStatus,
   });
 
-
   return () => {
-
     syncStatusListeners.delete(
       listener,
     );
-
   };
 }
 
@@ -124,9 +117,7 @@ function setSyncStatus(
     ...update,
   };
 
-
   notifySyncStatus();
-
 }
 
 
@@ -141,15 +132,12 @@ async function refreshPendingCount(): Promise<number> {
     const pendingTasks =
       await taskRepository.getPendingTasks();
 
-
     const count =
       pendingTasks.length;
-
 
     setSyncStatus({
       pendingCount: count,
     });
-
 
     return count;
 
@@ -160,11 +148,8 @@ async function refreshPendingCount(): Promise<number> {
       error,
     );
 
-
     return syncStatus.pendingCount;
-
   }
-
 }
 
 
@@ -177,11 +162,9 @@ function getTasksCollection() {
   const user =
     firebaseAuth.currentUser;
 
-
   if (!user) {
     return null;
   }
-
 
   return collection(
     firestoreDb,
@@ -189,7 +172,6 @@ function getTasksCollection() {
     user.uid,
     'tasks',
   );
-
 }
 
 
@@ -202,45 +184,42 @@ async function pushPendingTasks(): Promise<void> {
   const user =
     firebaseAuth.currentUser;
 
-
   if (!user) {
     return;
   }
 
-
   const tasksCollection =
     getTasksCollection();
-
 
   if (!tasksCollection) {
     return;
   }
 
-
   const pendingTasks =
     await taskRepository.getPendingTasks();
-
 
   setSyncStatus({
     pendingCount:
       pendingTasks.length,
   });
 
-
   if (
     pendingTasks.length === 0
   ) {
-
     return;
-
   }
-
 
   console.log(
     `SYNC: ${pendingTasks.length} pending task(s).`,
   );
 
-
+  /*
+   * Process the current pending snapshot.
+   *
+   * New changes created while this sync is
+   * running will remain pending and can be
+   * picked up by the next sync cycle.
+   */
   for (
     const task of pendingTasks
   ) {
@@ -252,51 +231,50 @@ async function pushPendingTasks(): Promise<void> {
         tasksCollection,
       );
 
-
       await taskRepository.markSynced(
         task.id,
       );
-
 
       if (task.deletedAt) {
 
         await taskRepository.removeDeletedTask(
           task.id,
         );
-
       }
 
-
       /*
-       * Refresh the number shown
-       * to the user after every task.
+       * Update pending count after each
+       * successfully synchronized task.
+       *
+       * This is useful for the offline/reconnect
+       * UI, but the normal online UI remains silent.
        */
       const remaining =
         await taskRepository.getPendingTasks();
-
 
       setSyncStatus({
         pendingCount:
           remaining.length,
       });
 
-
       console.log(
         `SYNC: ${task.id} synced.`,
       );
 
-
     } catch (error) {
 
+      /*
+       * Do NOT mark the task as synced.
+       *
+       * It remains pending in SQLite and
+       * can be retried later.
+       */
       console.error(
         `SYNC: Failed ${task.id}`,
         error,
       );
-
     }
-
   }
-
 }
 
 
@@ -319,28 +297,27 @@ async function syncTaskToFirestore(
     );
 
 
-  /*
-   * DELETE
-   */
+  /* ================================================= */
+  /* DELETE                                            */
+  /* ================================================= */
+
   if (task.deletedAt) {
 
     await deleteDoc(
       taskRef,
     );
 
-
     return;
-
   }
 
 
-  /*
-   * CREATE / UPDATE
-   */
+  /* ================================================= */
+  /* CREATE / UPDATE                                   */
+  /* ================================================= */
+
   await setDoc(
     taskRef,
     {
-
       id:
         task.id,
 
@@ -371,13 +348,11 @@ async function syncTaskToFirestore(
       userId:
         firebaseAuth.currentUser
           ?.uid ?? null,
-
     },
     {
       merge: true,
     },
   );
-
 }
 
 
@@ -390,26 +365,21 @@ async function pullRemoteTasks(): Promise<void> {
   const user =
     firebaseAuth.currentUser;
 
-
   if (!user) {
     return;
   }
 
-
   const tasksCollection =
     getTasksCollection();
-
 
   if (!tasksCollection) {
     return;
   }
 
-
   const snapshot =
     await getDocs(
       tasksCollection,
     );
-
 
   if (snapshot.empty) {
 
@@ -417,14 +387,10 @@ async function pullRemoteTasks(): Promise<void> {
       'SYNC: No remote tasks found.',
     );
 
-
     return;
-
   }
 
-
   let imported = 0;
-
 
   for (
     const firestoreDoc of snapshot.docs
@@ -432,7 +398,6 @@ async function pullRemoteTasks(): Promise<void> {
 
     const data =
       firestoreDoc.data();
-
 
     const remoteTask: Task = {
 
@@ -442,12 +407,10 @@ async function pullRemoteTasks(): Promise<void> {
           firestoreDoc.id,
         ),
 
-
       title:
         String(
           data.title ?? '',
         ),
-
 
       description:
         typeof data.description ===
@@ -455,12 +418,10 @@ async function pullRemoteTasks(): Promise<void> {
           ? data.description
           : '',
 
-
       dueDate:
         String(
           data.dueDate ?? '',
         ),
-
 
       dueTime:
         typeof data.dueTime ===
@@ -468,18 +429,15 @@ async function pullRemoteTasks(): Promise<void> {
           ? data.dueTime
           : '',
 
-
       priority:
         normalizePriority(
           data.priority,
         ),
 
-
       status:
         normalizeStatus(
           data.status,
         ),
-
 
       createdAt:
         String(
@@ -487,30 +445,23 @@ async function pullRemoteTasks(): Promise<void> {
           new Date().toISOString(),
         ),
 
-
       updatedAt:
         String(
           data.updatedAt ??
           new Date().toISOString(),
         ),
-
     };
-
 
     await taskRepository.upsertRemoteTask(
       remoteTask,
     );
 
-
     imported += 1;
-
   }
-
 
   console.log(
     `SYNC: ${imported} remote task(s) processed.`,
   );
-
 }
 
 
@@ -529,12 +480,9 @@ function normalizePriority(
   ) {
 
     return value;
-
   }
 
-
   return 'medium';
-
 }
 
 
@@ -552,12 +500,112 @@ function normalizeStatus(
   ) {
 
     return value;
+  }
 
+  return 'pending';
+}
+
+
+/* ================================================= */
+/* SYNC LOCK                                         */
+/* ================================================= */
+
+let syncing = false;
+
+
+/* ================================================= */
+/* SYNC SCHEDULER                                    */
+/* ================================================= */
+
+/*
+ * Small debounce window.
+ *
+ * Example:
+ *
+ * Create
+ * Edit
+ * Toggle
+ * Delete
+ *
+ * within 400ms
+ *
+ * => one background sync cycle.
+ */
+const SYNC_DEBOUNCE_MS = 400;
+
+
+let scheduledSyncTimer:
+  ReturnType<typeof setTimeout> | null =
+  null;
+
+
+let scheduledSyncPromise:
+  Promise<void> | null =
+  null;
+
+
+let scheduledSyncResolve:
+  (() => void) | null =
+  null;
+
+
+function scheduleBackgroundSync(): Promise<void> {
+
+  /*
+   * If a sync has already been scheduled,
+   * don't create another timer.
+   */
+  if (
+    scheduledSyncPromise
+  ) {
+
+    return scheduledSyncPromise;
   }
 
 
-  return 'pending';
+  scheduledSyncPromise =
+    new Promise<void>(
+      resolve => {
 
+        scheduledSyncResolve =
+          resolve;
+      },
+    );
+
+
+  scheduledSyncTimer =
+    setTimeout(
+      () => {
+
+        scheduledSyncTimer =
+          null;
+
+        void syncPendingTasks({
+          showOnlineStatus: false,
+          refreshTasksAfterSync: false,
+        })
+          .finally(() => {
+
+            const resolve =
+              scheduledSyncResolve;
+
+            scheduledSyncResolve =
+              null;
+
+            scheduledSyncPromise =
+              null;
+
+            resolve?.();
+
+          });
+
+      },
+
+      SYNC_DEBOUNCE_MS,
+    );
+
+
+  return scheduledSyncPromise;
 }
 
 
@@ -565,16 +613,44 @@ function normalizeStatus(
 /* FULL SYNC                                         */
 /* ================================================= */
 
-async function syncPendingTasks(): Promise<void> {
+interface SyncOptions {
+
+  /*
+   * true:
+   * Show "Syncing..." / "All changes synced".
+   *
+   * false:
+   * Keep normal online background sync silent.
+   */
+  showOnlineStatus?: boolean;
+
+  /*
+   * Used by RootNavigator after initial sync
+   * or reconnection.
+   *
+   * This refreshes Redux from SQLite after
+   * Firestore data has been pulled.
+   */
+  refreshTasksAfterSync?: boolean;
+
+  /*
+   * Called after a successful sync when
+   * Redux should re-read SQLite.
+   */
+  onTasksChanged?: () => void;
+}
+
+
+async function syncPendingTasks(
+  options: SyncOptions = {},
+): Promise<void> {
 
   if (syncing) {
     return;
   }
 
-
   const user =
     firebaseAuth.currentUser;
-
 
   if (!user) {
 
@@ -582,11 +658,8 @@ async function syncPendingTasks(): Promise<void> {
       'SYNC: No authenticated user.',
     );
 
-
     return;
-
   }
-
 
   try {
 
@@ -601,17 +674,15 @@ async function syncPendingTasks(): Promise<void> {
       network.isConnected === true;
 
 
-    /*
-     * Update network state immediately.
-     */
     setSyncStatus({
       isConnected,
     });
 
 
-    /*
-     * OFFLINE
-     */
+    /* ================================================= */
+    /* OFFLINE                                           */
+    /* ================================================= */
+
     if (!isConnected) {
 
       const pendingCount =
@@ -623,7 +694,8 @@ async function syncPendingTasks(): Promise<void> {
         status:
           'offline',
 
-        isConnected: false,
+        isConnected:
+          false,
 
         pendingCount,
 
@@ -635,7 +707,6 @@ async function syncPendingTasks(): Promise<void> {
                   : 's'
               } waiting to sync`
             : 'Changes will sync when you are back online',
-
       });
 
 
@@ -645,24 +716,48 @@ async function syncPendingTasks(): Promise<void> {
 
 
       return;
-
     }
 
 
-    /*
-     * ONLINE
-     */
-    setSyncStatus({
+    /* ================================================= */
+    /* ONLINE STATUS                                     */
+    /* ================================================= */
 
-      status:
-        'syncing',
+    if (
+      options.showOnlineStatus
+    ) {
 
-      isConnected: true,
+      setSyncStatus({
 
-      message:
-        'Syncing your changes...',
+        status:
+          'syncing',
 
-    });
+        isConnected:
+          true,
+
+        message:
+          'Syncing your changes...',
+      });
+
+    } else {
+
+      /*
+       * Normal background sync.
+       *
+       * Keep the UI silent.
+       */
+      setSyncStatus({
+
+        isConnected:
+          true,
+
+        status:
+          'syncing',
+
+        message:
+          undefined,
+      });
+    }
 
 
     console.log(
@@ -670,50 +765,101 @@ async function syncPendingTasks(): Promise<void> {
     );
 
 
-    /*
-     * Push local changes first.
-     */
+    /* ================================================= */
+    /* PUSH LOCAL → FIRESTORE                            */
+    /* ================================================= */
+
     await pushPendingTasks();
 
 
-    /*
-     * Then pull remote changes.
-     */
+    /* ================================================= */
+    /* PULL FIRESTORE → SQLITE                           */
+    /* ================================================= */
+
     await pullRemoteTasks();
 
+
+    /* ================================================= */
+    /* REFRESH PENDING COUNT                             */
+    /* ================================================= */
 
     const pendingCount =
       await refreshPendingCount();
 
 
+    /* ================================================= */
+    /* REFRESH REDUX                                     */
+    /* ================================================= */
+
     /*
-     * Everything synced.
+     * Only initial/reconnection/manual flows
+     * need to reload Redux from SQLite.
+     *
+     * Normal CRUD already updates Redux directly,
+     * so doing loadTasks() after every background
+     * sync would be unnecessary work.
      */
-    setSyncStatus({
+    if (
+      options.refreshTasksAfterSync &&
+      options.onTasksChanged
+    ) {
 
-      status:
-        'synced',
+      options.onTasksChanged();
+    }
 
-      isConnected: true,
 
-      pendingCount,
+    /* ================================================= */
+    /* FINAL STATUS                                      */
+    /* ================================================= */
 
-      message:
-        pendingCount > 0
-          ? `${pendingCount} change${
-              pendingCount === 1
-                ? ''
-                : 's'
-            } waiting to sync`
-          : 'All changes synced',
+    if (
+      options.showOnlineStatus
+    ) {
 
-    });
+      setSyncStatus({
+
+        status:
+          'synced',
+
+        isConnected:
+          true,
+
+        pendingCount,
+
+        message:
+          pendingCount > 0
+            ? `${pendingCount} change${
+                pendingCount === 1
+                  ? ''
+                  : 's'
+              } waiting to sync`
+            : 'All changes synced',
+      });
+
+    } else {
+
+      /*
+       * Background online sync remains silent.
+       */
+      setSyncStatus({
+
+        status:
+          'synced',
+
+        isConnected:
+          true,
+
+        pendingCount,
+
+        message:
+          undefined,
+      });
+    }
 
 
     console.log(
       'SYNC: Completed.',
     );
-
 
   } catch (error) {
 
@@ -734,43 +880,52 @@ async function syncPendingTasks(): Promise<void> {
 
       pendingCount,
 
+      isConnected:
+        syncStatus.isConnected,
+
       message:
         'Sync failed. We will retry automatically.',
-
     });
-
 
   } finally {
 
     syncing = false;
-
   }
-
 }
-
-
-/* ================================================= */
-/* SYNC LOCK                                         */
-/* ================================================= */
-
-let syncing = false;
 
 
 /* ================================================= */
 /* START LISTENER                                    */
 /* ================================================= */
 
-export function startSyncListener(): () => void {
+export function startSyncListener(
+  onTasksChanged?: () => void,
+): () => void {
 
   /*
-   * Initial sync.
+   * Initial synchronization.
+   *
+   * This is important for a fresh installation.
+   *
+   * Firestore → SQLite
+   * then Redux reloads from SQLite.
    */
-  void syncPendingTasks();
+  void syncPendingTasks({
+
+    showOnlineStatus:
+      false,
+
+    refreshTasksAfterSync:
+      true,
+
+    onTasksChanged,
+  });
 
 
-  /*
-   * Network listener.
-   */
+  /* ================================================= */
+  /* NETWORK LISTENER                                  */
+  /* ================================================= */
+
   const unsubscribe =
     NetInfo.addEventListener(
       state => {
@@ -778,6 +933,10 @@ export function startSyncListener(): () => void {
         const isConnected =
           state.isConnected === true;
 
+
+        /* ============================================= */
+        /* OFFLINE                                       */
+        /* ============================================= */
 
         if (!isConnected) {
 
@@ -803,53 +962,146 @@ export function startSyncListener(): () => void {
                             : 's'
                         } waiting to sync`
                       : 'Changes will sync when you are back online',
-
                 });
 
               },
             );
 
-
           return;
-
         }
 
 
+        /* ============================================= */
+        /* ONLINE / RECONNECTED                          */
+        /* ============================================= */
+
         /*
-         * Internet returned.
+         * Reconnection is different from a normal
+         * online task operation.
+         *
+         * Here we DO show a useful status message.
          */
         setSyncStatus({
 
-          isConnected: true,
+          isConnected:
+            true,
 
           status:
             'syncing',
 
           message:
             'Back online · Syncing...',
-
         });
 
 
-        void syncPendingTasks();
+        /*
+         * Run immediately on reconnection.
+         *
+         * No debounce here because the network
+         * transition itself is the trigger.
+         */
+        void syncPendingTasks({
+
+          showOnlineStatus:
+            true,
+
+          refreshTasksAfterSync:
+            true,
+
+          onTasksChanged,
+        });
 
       },
     );
 
 
-  return unsubscribe;
+  return () => {
 
+    unsubscribe();
+
+
+    /*
+     * Cancel a scheduled background sync
+     * when the authenticated sync lifecycle
+     * is being stopped.
+     */
+    if (
+      scheduledSyncTimer
+    ) {
+
+      clearTimeout(
+        scheduledSyncTimer,
+      );
+
+      scheduledSyncTimer =
+        null;
+    }
+
+
+    if (
+      scheduledSyncResolve
+    ) {
+
+      const resolve =
+        scheduledSyncResolve;
+
+      scheduledSyncResolve =
+        null;
+
+      scheduledSyncPromise =
+        null;
+
+      resolve();
+    }
+  };
 }
 
 
 /* ================================================= */
-/* MANUAL SYNC                                       */
+/* BACKGROUND SYNC                                   */
 /* ================================================= */
 
+/*
+ * Called by task CRUD operations.
+ *
+ * IMPORTANT:
+ *
+ * This does NOT immediately run a sync.
+ *
+ * It schedules/coalesces background sync
+ * so multiple rapid changes can be handled
+ * by one synchronization cycle.
+ */
 export async function syncTasks(): Promise<void> {
 
-  await syncPendingTasks();
+  await scheduleBackgroundSync();
+}
 
+
+/* ================================================= */
+/* MANUAL / IMMEDIATE SYNC                           */
+/* ================================================= */
+
+/*
+ * Optional explicit sync function.
+ *
+ * Useful if another part of the app needs
+ * to force synchronization immediately.
+ */
+export async function forceSyncTasks(
+  onTasksChanged?: () => void,
+): Promise<void> {
+
+  await syncPendingTasks({
+
+    showOnlineStatus:
+      true,
+
+    refreshTasksAfterSync:
+      true,
+
+    onTasksChanged,
+  });
 }
 
 
@@ -862,5 +1114,4 @@ export function getSyncStatus(): SyncStatusState {
   return {
     ...syncStatus,
   };
-
 }
