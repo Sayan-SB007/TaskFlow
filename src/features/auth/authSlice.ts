@@ -1,20 +1,11 @@
-import {
-  createAsyncThunk,
-  createSlice,
-  PayloadAction,
-} from '@reduxjs/toolkit';
+import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 
-import type {User} from 'firebase/auth';
+import type { User } from 'firebase/auth';
 
-import {authService} from './authService';
-import type {
-  AuthState,
-  AuthUser,
-} from './types';
+import { authService } from './authService';
+import type { AuthState, AuthUser } from './types';
 
-const mapUser = (
-  user: User | null,
-): AuthUser | null => {
+const mapUser = (user: User | null): AuthUser | null => {
   if (!user) {
     return null;
   }
@@ -26,17 +17,9 @@ const mapUser = (
   };
 };
 
-const getErrorMessage = (
-  error: unknown,
-): string => {
-  if (
-    typeof error === 'object' &&
-    error !== null &&
-    'message' in error
-  ) {
-    return String(
-      (error as {message: unknown}).message,
-    );
+const getErrorMessage = (error: unknown): string => {
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    return String((error as { message: unknown }).message);
   }
 
   return 'Something went wrong.';
@@ -53,20 +36,14 @@ export const signUp = createAsyncThunk(
       email: string;
       password: string;
     },
-    {rejectWithValue},
+    { rejectWithValue },
   ) => {
     try {
-      const user =
-        await authService.signUp(
-          payload.email,
-          payload.password,
-        );
+      const user = await authService.signUp(payload.email, payload.password);
 
       return mapUser(user);
     } catch (error) {
-      return rejectWithValue(
-        getErrorMessage(error),
-      );
+      return rejectWithValue(getErrorMessage(error));
     }
   },
 );
@@ -82,20 +59,14 @@ export const login = createAsyncThunk(
       email: string;
       password: string;
     },
-    {rejectWithValue},
+    { rejectWithValue },
   ) => {
     try {
-      const user =
-        await authService.login(
-          payload.email,
-          payload.password,
-        );
+      const user = await authService.login(payload.email, payload.password);
 
       return mapUser(user);
     } catch (error) {
-      return rejectWithValue(
-        getErrorMessage(error),
-      );
+      return rejectWithValue(getErrorMessage(error));
     }
   },
 );
@@ -106,13 +77,11 @@ export const login = createAsyncThunk(
 
 export const logout = createAsyncThunk(
   'auth/logout',
-  async (_, {rejectWithValue}) => {
+  async (_, { rejectWithValue }) => {
     try {
       await authService.logout();
     } catch (error) {
-      return rejectWithValue(
-        getErrorMessage(error),
-      );
+      return rejectWithValue(getErrorMessage(error));
     }
   },
 );
@@ -141,17 +110,12 @@ const authSlice = createSlice({
   initialState,
 
   reducers: {
-    authStateChanged: (
-      state,
-      action: PayloadAction<AuthUser | null>,
-    ) => {
+    authStateChanged: (state, action: PayloadAction<AuthUser | null>) => {
       state.user = action.payload;
 
       state.initialized = true;
 
-      state.status = action.payload
-        ? 'authenticated'
-        : 'unauthenticated';
+      state.status = action.payload ? 'authenticated' : 'unauthenticated';
 
       state.error = null;
     },
@@ -164,74 +128,51 @@ const authSlice = createSlice({
   extraReducers: builder => {
     /* SIGN UP */
 
-    builder.addCase(
-      signUp.pending,
-      state => {
-        state.status = 'loading';
-        state.error = null;
-      },
-    );
+    builder.addCase(signUp.pending, state => {
+      state.status = 'loading';
+      state.error = null;
+    });
 
-    builder.addCase(
-      signUp.fulfilled,
-      (state, action) => {
-        state.user = action.payload;
-        state.status = 'authenticated';
-        state.initialized = true;
-        state.error = null;
-      },
-    );
+    builder.addCase(signUp.fulfilled, (state, action) => {
+      state.user = action.payload;
+      state.status = 'authenticated';
+      state.initialized = true;
+      state.error = null;
+    });
 
-    builder.addCase(
-      signUp.rejected,
-      (state, action) => {
-        state.status = 'error';
+    builder.addCase(signUp.rejected, (state, action) => {
+      state.status = 'error';
 
-        state.error =
-          action.payload as string;
-      },
-    );
+      state.error = action.payload as string;
+    });
 
     /* LOGIN */
 
-    builder.addCase(
-      login.pending,
-      state => {
-        state.status = 'loading';
-        state.error = null;
-      },
-    );
+    builder.addCase(login.pending, state => {
+      state.status = 'loading';
+      state.error = null;
+    });
 
-    builder.addCase(
-      login.fulfilled,
-      (state, action) => {
-        state.user = action.payload;
-        state.status = 'authenticated';
-        state.initialized = true;
-        state.error = null;
-      },
-    );
+    builder.addCase(login.fulfilled, (state, action) => {
+      state.user = action.payload;
+      state.status = 'authenticated';
+      state.initialized = true;
+      state.error = null;
+    });
 
-    builder.addCase(
-      login.rejected,
-      (state, action) => {
-        state.status = 'error';
+    builder.addCase(login.rejected, (state, action) => {
+      state.status = 'error';
 
-        state.error =
-          action.payload as string;
-      },
-    );
+      state.error = action.payload as string;
+    });
 
     /* LOGOUT */
 
-    builder.addCase(
-      logout.fulfilled,
-      state => {
-        state.user = null;
-        state.status = 'unauthenticated';
-        state.error = null;
-      },
-    );
+    builder.addCase(logout.fulfilled, state => {
+      state.user = null;
+      state.status = 'unauthenticated';
+      state.error = null;
+    });
   },
 });
 
@@ -239,32 +180,19 @@ const authSlice = createSlice({
 /* ACTIONS                                           */
 /* ================================================= */
 
-export const {
-  authStateChanged,
-  clearAuthError,
-} = authSlice.actions;
+export const { authStateChanged, clearAuthError } = authSlice.actions;
 
 /* ================================================= */
 /* SELECTORS                                         */
 /* ================================================= */
 
-export const selectAuthUser = (
-  state: {
-    auth: AuthState;
-  },
-) => state.auth.user;
+export const selectAuthUser = (state: { auth: AuthState }) => state.auth.user;
 
-export const selectAuthStatus = (
-  state: {
-    auth: AuthState;
-  },
-) => state.auth.status;
+export const selectAuthStatus = (state: { auth: AuthState }) =>
+  state.auth.status;
 
-export const selectAuthInitialized = (
-  state: {
-    auth: AuthState;
-  },
-) => state.auth.initialized;
+export const selectAuthInitialized = (state: { auth: AuthState }) =>
+  state.auth.initialized;
 
 /* ================================================= */
 /* REDUCER                                           */

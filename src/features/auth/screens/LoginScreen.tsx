@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 
 import {
   ActivityIndicator,
@@ -12,47 +12,35 @@ import {
   View,
 } from 'react-native';
 
-import {SafeAreaView} from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
 } from 'firebase/auth';
 
-import {firebaseAuth} from '../../../config/firebase';
+import { firebaseAuth } from '../../../config/firebase';
 
-export default function LoginScreen({
-  navigation,
-}: any) {
+export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
-  const [password, setPassword] =
-    useState('');
+  const [password, setPassword] = useState('');
 
-  const [showPassword, setShowPassword] =
-    useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const [loading, setLoading] =
-    useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const [resetLoading, setResetLoading] =
-    useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
-  const [error, setError] =
-    useState('');
+  const [error, setError] = useState('');
 
-  const [resetMessage, setResetMessage] =
-    useState('');
+  const [resetMessage, setResetMessage] = useState('');
 
   /* ================================================= */
   /* VALIDATION                                        */
   /* ================================================= */
 
-  const validateEmail = (
-    value: string,
-  ) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-      value,
-    );
+  const validateEmail = (value: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
   };
 
   /* ================================================= */
@@ -63,38 +51,27 @@ export default function LoginScreen({
     setError('');
     setResetMessage('');
 
-    const cleanEmail =
-      email.trim().toLowerCase();
+    const cleanEmail = email.trim().toLowerCase();
 
     if (!cleanEmail) {
-      setError(
-        'Please enter your email address.',
-      );
+      setError('Please enter your email address.');
       return;
     }
 
     if (!validateEmail(cleanEmail)) {
-      setError(
-        'Please enter a valid email address.',
-      );
+      setError('Please enter a valid email address.');
       return;
     }
 
     if (!password) {
-      setError(
-        'Please enter your password.',
-      );
+      setError('Please enter your password.');
       return;
     }
 
     try {
       setLoading(true);
 
-      await signInWithEmailAndPassword(
-        firebaseAuth,
-        cleanEmail,
-        password,
-      );
+      await signInWithEmailAndPassword(firebaseAuth, cleanEmail, password);
 
       /*
        * Firebase authentication state
@@ -105,54 +82,37 @@ export default function LoginScreen({
        * application.
        */
     } catch (error: any) {
-      console.log(
-        'LOGIN ERROR:',
-        error,
-      );
+      console.log('LOGIN ERROR:', error);
 
       switch (error?.code) {
         case 'auth/invalid-credential':
         case 'auth/wrong-password':
         case 'auth/user-not-found':
-          setError(
-            'Incorrect email or password.',
-          );
+          setError('Incorrect email or password.');
           break;
 
         case 'auth/invalid-email':
-          setError(
-            'Please enter a valid email address.',
-          );
+          setError('Please enter a valid email address.');
           break;
 
         case 'auth/user-disabled':
-          setError(
-            'This account has been disabled.',
-          );
+          setError('This account has been disabled.');
           break;
 
         case 'auth/too-many-requests':
-          setError(
-            'Too many failed attempts. Please try again later.',
-          );
+          setError('Too many failed attempts. Please try again later.');
           break;
 
         case 'auth/network-request-failed':
-          setError(
-            'Network error. Please check your internet connection.',
-          );
+          setError('Network error. Please check your internet connection.');
           break;
 
         case 'auth/operation-not-allowed':
-          setError(
-            'Email/password authentication is not enabled.',
-          );
+          setError('Email/password authentication is not enabled.');
           break;
 
         default:
-          setError(
-            'Unable to sign in. Please try again.',
-          );
+          setError('Unable to sign in. Please try again.');
       }
     } finally {
       setLoading(false);
@@ -167,63 +127,42 @@ export default function LoginScreen({
     setError('');
     setResetMessage('');
 
-    const cleanEmail =
-      email.trim().toLowerCase();
+    const cleanEmail = email.trim().toLowerCase();
 
     if (!cleanEmail) {
-      setError(
-        'Enter your email address first, then tap Forgot password.',
-      );
+      setError('Enter your email address first, then tap Forgot password.');
       return;
     }
 
     if (!validateEmail(cleanEmail)) {
-      setError(
-        'Please enter a valid email address.',
-      );
+      setError('Please enter a valid email address.');
       return;
     }
 
     try {
       setResetLoading(true);
 
-      await sendPasswordResetEmail(
-        firebaseAuth,
-        cleanEmail,
-      );
+      await sendPasswordResetEmail(firebaseAuth, cleanEmail);
 
-      setResetMessage(
-        'Password reset email sent. Check your inbox.',
-      );
+      setResetMessage('Password reset email sent. Check your inbox.');
     } catch (error: any) {
-      console.log(
-        'PASSWORD RESET ERROR:',
-        error,
-      );
+      console.log('PASSWORD RESET ERROR:', error);
 
       switch (error?.code) {
         case 'auth/user-not-found':
-          setError(
-            'No account was found with this email.',
-          );
+          setError('No account was found with this email.');
           break;
 
         case 'auth/invalid-email':
-          setError(
-            'Please enter a valid email address.',
-          );
+          setError('Please enter a valid email address.');
           break;
 
         case 'auth/network-request-failed':
-          setError(
-            'Network error. Please check your internet connection.',
-          );
+          setError('Network error. Please check your internet connection.');
           break;
 
         default:
-          setError(
-            'Unable to send the reset email. Please try again.',
-          );
+          setError('Unable to send the reset email. Please try again.');
       }
     } finally {
       setResetLoading(false);
@@ -235,73 +174,44 @@ export default function LoginScreen({
   /* ================================================= */
 
   return (
-    <SafeAreaView
-      style={styles.safeArea}
-      edges={['top', 'bottom']}>
-
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
         style={styles.keyboardContainer}
-        behavior={
-          Platform.OS === 'ios'
-            ? 'padding'
-            : 'height'
-        }
-        keyboardVerticalOffset={
-          Platform.OS === 'ios' ? 0 : 20
-        }>
-
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
         <ScrollView
           style={styles.scroll}
-          contentContainerStyle={
-            styles.scrollContent
-          }
+          contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode={
-            Platform.OS === 'ios'
-              ? 'interactive'
-              : 'on-drag'
+            Platform.OS === 'ios' ? 'interactive' : 'on-drag'
           }
           automaticallyAdjustKeyboardInsets
-          showsVerticalScrollIndicator={false}>
-
+          showsVerticalScrollIndicator={false}
+        >
           {/* ================================================= */}
           {/* HERO                                               */}
           {/* ================================================= */}
 
           <View style={styles.hero}>
+            <View style={styles.heroCircleOne} />
 
-            <View
-              style={styles.heroCircleOne}
-            />
-
-            <View
-              style={styles.heroCircleTwo}
-            />
+            <View style={styles.heroCircleTwo} />
 
             <View style={styles.brandRow}>
-
               <View style={styles.logoBox}>
-                <Text style={styles.logoCheck}>
-                  ✓
-                </Text>
+                <Text style={styles.logoCheck}>✓</Text>
               </View>
 
-              <Text style={styles.brand}>
-                TaskFlow
-              </Text>
-
+              <Text style={styles.brand}>TaskFlow</Text>
             </View>
 
-            <Text style={styles.heroTitle}>
-              Welcome back
-            </Text>
+            <Text style={styles.heroTitle}>Welcome back</Text>
 
-            <Text
-              style={styles.heroSubtitle}>
-              Sign in to continue managing
-              your tasks and stay productive.
+            <Text style={styles.heroSubtitle}>
+              Sign in to continue managing your tasks and stay productive.
             </Text>
-
           </View>
 
           {/* ================================================= */}
@@ -309,20 +219,12 @@ export default function LoginScreen({
           {/* ================================================= */}
 
           <View style={styles.card}>
-
             {/* EMAIL */}
 
-            <Text style={styles.label}>
-              Email address
-            </Text>
+            <Text style={styles.label}>Email address</Text>
 
-            <View
-              style={styles.inputContainer}>
-
-              <Text
-                style={styles.inputIcon}>
-                @
-              </Text>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputIcon}>@</Text>
 
               <TextInput
                 style={styles.input}
@@ -344,59 +246,32 @@ export default function LoginScreen({
                 autoCapitalize="none"
                 autoCorrect={false}
                 autoComplete="email"
-                editable={
-                  !loading &&
-                  !resetLoading
-                }
+                editable={!loading && !resetLoading}
                 returnKeyType="next"
               />
-
             </View>
 
             {/* PASSWORD HEADER */}
 
             <View style={styles.labelRow}>
-
-              <Text style={styles.label}>
-                Password
-              </Text>
+              <Text style={styles.label}>Password</Text>
 
               <Pressable
-                onPress={
-                  handleForgotPassword
-                }
-                disabled={
-                  loading ||
-                  resetLoading
-                }>
-
+                onPress={handleForgotPassword}
+                disabled={loading || resetLoading}
+              >
                 {resetLoading ? (
-                  <ActivityIndicator
-                    size="small"
-                    color="#1769E0"
-                  />
+                  <ActivityIndicator size="small" color="#1769E0" />
                 ) : (
-                  <Text
-                    style={
-                      styles.forgotPassword
-                    }>
-                    Forgot password?
-                  </Text>
+                  <Text style={styles.forgotPassword}>Forgot password?</Text>
                 )}
-
               </Pressable>
-
             </View>
 
             {/* PASSWORD */}
 
-            <View
-              style={styles.inputContainer}>
-
-              <Text
-                style={styles.inputIcon}>
-                •
-              </Text>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputIcon}>•</Text>
 
               <TextInput
                 style={styles.input}
@@ -410,101 +285,47 @@ export default function LoginScreen({
                 }}
                 placeholder="Enter your password"
                 placeholderTextColor="#9CA3AF"
-                secureTextEntry={
-                  !showPassword
-                }
+                secureTextEntry={!showPassword}
                 autoCapitalize="none"
                 autoCorrect={false}
                 autoComplete="password"
-                editable={
-                  !loading &&
-                  !resetLoading
-                }
+                editable={!loading && !resetLoading}
                 returnKeyType="done"
-                onSubmitEditing={
-                  handleLogin
-                }
+                onSubmitEditing={handleLogin}
               />
 
               <Pressable
-                onPress={() =>
-                  setShowPassword(
-                    value => !value,
-                  )
-                }
+                onPress={() => setShowPassword(value => !value)}
                 style={styles.showButton}
-                disabled={
-                  loading ||
-                  resetLoading
-                }>
-
+                disabled={loading || resetLoading}
+              >
                 <Text style={styles.showText}>
-                  {showPassword
-                    ? 'Hide'
-                    : 'Show'}
+                  {showPassword ? 'Hide' : 'Show'}
                 </Text>
-
               </Pressable>
-
             </View>
 
             {/* RESET SUCCESS */}
 
             {resetMessage ? (
-              <View
-                style={
-                  styles.successContainer
-                }>
-
-                <View
-                  style={
-                    styles.successIcon
-                  }>
-                  <Text
-                    style={
-                      styles.successIconText
-                    }>
-                    ✓
-                  </Text>
+              <View style={styles.successContainer}>
+                <View style={styles.successIcon}>
+                  <Text style={styles.successIconText}>✓</Text>
                 </View>
 
-                <Text
-                  style={
-                    styles.successText
-                  }>
-                  {resetMessage}
-                </Text>
-
+                <Text style={styles.successText}>{resetMessage}</Text>
               </View>
             ) : null}
 
             {/* ERROR */}
 
             {error ? (
-              <View
-                style={
-                  styles.errorContainer
-                }>
-
-                <View
-                  style={
-                    styles.errorIcon
-                  }>
-                  <Text
-                    style={
-                      styles.errorIconText
-                    }>
-                    !
-                  </Text>
+              <View style={styles.errorContainer}>
+                <View style={styles.errorIcon}>
+                  <Text style={styles.errorIconText}>!</Text>
                 </View>
 
-                <Text
-                  style={
-                    styles.errorText
-                  }>
-                  {error}
-                </Text>
-
+                <Text style={styles.errorText}>{error}</Text>
               </View>
             ) : null}
 
@@ -512,40 +333,22 @@ export default function LoginScreen({
 
             <Pressable
               onPress={handleLogin}
-              disabled={
-                loading ||
-                resetLoading
-              }
-              style={({pressed}) => [
+              disabled={loading || resetLoading}
+              style={({ pressed }) => [
                 styles.loginButton,
-                pressed &&
-                  styles.buttonPressed,
-                loading &&
-                  styles.buttonDisabled,
-              ]}>
-
+                pressed && styles.buttonPressed,
+                loading && styles.buttonDisabled,
+              ]}
+            >
               {loading ? (
-                <ActivityIndicator
-                  color="#FFFFFF"
-                />
+                <ActivityIndicator color="#FFFFFF" />
               ) : (
                 <>
-                  <Text
-                    style={
-                      styles.loginButtonText
-                    }>
-                    Sign in
-                  </Text>
+                  <Text style={styles.loginButtonText}>Sign in</Text>
 
-                  <Text
-                    style={
-                      styles.loginArrow
-                    }>
-                    →
-                  </Text>
+                  <Text style={styles.loginArrow}>→</Text>
                 </>
               )}
-
             </Pressable>
 
             {/* ================================================= */}
@@ -573,46 +376,24 @@ export default function LoginScreen({
             {/* SIGN UP */}
 
             <View style={styles.signupRow}>
-
-              <Text style={styles.signupText}>
-                Don't have an account?
-              </Text>
+              <Text style={styles.signupText}>Don't have an account?</Text>
 
               <Pressable
-                onPress={() =>
-                  navigation.navigate(
-                    'Signup',
-                  )
-                }
-                disabled={
-                  loading ||
-                  resetLoading
-                }>
-
-                <Text
-                  style={
-                    styles.signupLink
-                  }>
-                  Create account
-                </Text>
-
+                onPress={() => navigation.navigate('Signup')}
+                disabled={loading || resetLoading}
+              >
+                <Text style={styles.signupLink}>Create account</Text>
               </Pressable>
-
             </View>
-
           </View>
 
           {/* FOOTER */}
 
           <Text style={styles.footer}>
-            Your tasks are waiting. Let's get
-            things done.
+            Your tasks are waiting. Let's get things done.
           </Text>
-
         </ScrollView>
-
       </KeyboardAvoidingView>
-
     </SafeAreaView>
   );
 }
@@ -656,8 +437,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 110,
-    backgroundColor:
-      'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
     right: -90,
     top: -80,
   },
@@ -667,8 +447,7 @@ const styles = StyleSheet.create({
     width: 140,
     height: 140,
     borderRadius: 70,
-    backgroundColor:
-      'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
     left: -70,
     bottom: -70,
   },

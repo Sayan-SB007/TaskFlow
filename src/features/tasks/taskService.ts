@@ -1,6 +1,6 @@
-import type {Task} from './types';
+import type { Task } from './types';
 
-import {taskRepository} from '../../database/repositories/taskRepository';
+import { taskRepository } from '../../database/repositories/taskRepository';
 /**
  * TaskService
  *
@@ -20,21 +20,17 @@ export const taskService = {
   /**
    * Load a single task.
    */
-  async getTaskById(
-    id: string,
-  ): Promise<Task | null> {
+  async getTaskById(id: string): Promise<Task | null> {
     return taskRepository.getTaskById(id);
   },
-  
+
   /**
    * Create a task locally.
    *
    * The repository also places the mutation
    * into the offline sync queue.
    */
-  async createTask(
-    task: Task,
-  ): Promise<Task> {
+  async createTask(task: Task): Promise<Task> {
     validateTask(task);
 
     return taskRepository.createTask(task);
@@ -43,20 +39,13 @@ export const taskService = {
   /**
    * Update an existing task.
    */
-  async updateTask(
-    task: Task,
-  ): Promise<Task> {
+  async updateTask(task: Task): Promise<Task> {
     validateTask(task);
 
-    const existing =
-      await taskRepository.getTaskById(
-        task.id,
-      );
+    const existing = await taskRepository.getTaskById(task.id);
 
     if (!existing) {
-      throw new Error(
-        `Task "${task.id}" was not found.`,
-      );
+      throw new Error(`Task "${task.id}" was not found.`);
     }
 
     return taskRepository.updateTask(task);
@@ -65,37 +54,24 @@ export const taskService = {
   /**
    * Toggle task completion state.
    */
-  async toggleTask(
-    task: Task,
-  ): Promise<Task> {
+  async toggleTask(task: Task): Promise<Task> {
     const updatedTask: Task = {
       ...task,
-      status:
-        task.status === 'completed'
-          ? 'pending'
-          : 'completed',
-      updatedAt:
-        new Date().toISOString(),
+      status: task.status === 'completed' ? 'pending' : 'completed',
+      updatedAt: new Date().toISOString(),
     };
 
-    return taskRepository.updateTask(
-      updatedTask,
-    );
+    return taskRepository.updateTask(updatedTask);
   },
 
   /**
    * Delete a task.
    */
-  async deleteTask(
-    id: string,
-  ): Promise<void> {
-    const existing =
-      await taskRepository.getTaskById(id);
+  async deleteTask(id: string): Promise<void> {
+    const existing = await taskRepository.getTaskById(id);
 
     if (!existing) {
-      throw new Error(
-        `Task "${id}" was not found.`,
-      );
+      throw new Error(`Task "${id}" was not found.`);
     }
 
     await taskRepository.deleteTask(id);
@@ -112,9 +88,7 @@ export const taskService = {
   /**
    * Mark a task as successfully synchronized.
    */
-  async markTaskSynced(
-    id: string,
-  ): Promise<void> {
+  async markTaskSynced(id: string): Promise<void> {
     await taskRepository.markSynced(id);
   },
 };
@@ -125,15 +99,11 @@ export const taskService = {
 
 function validateTask(task: Task): void {
   if (!task.id.trim()) {
-    throw new Error(
-      'Task ID is required.',
-    );
+    throw new Error('Task ID is required.');
   }
 
   if (!task.title.trim()) {
-    throw new Error(
-      'Task title is required.',
-    );
+    throw new Error('Task title is required.');
   }
 
   // if (!task.dueDate.trim()) {
@@ -142,34 +112,15 @@ function validateTask(task: Task): void {
   //   );
   // }
 
-  const validPriorities = [
-    'low',
-    'medium',
-    'high',
-  ];
+  const validPriorities = ['low', 'medium', 'high'];
 
-  if (
-    !validPriorities.includes(
-      task.priority,
-    )
-  ) {
-    throw new Error(
-      `Invalid task priority: ${task.priority}`,
-    );
+  if (!validPriorities.includes(task.priority)) {
+    throw new Error(`Invalid task priority: ${task.priority}`);
   }
 
-  const validStatuses = [
-    'pending',
-    'completed',
-  ];
+  const validStatuses = ['pending', 'completed'];
 
-  if (
-    !validStatuses.includes(
-      task.status,
-    )
-  ) {
-    throw new Error(
-      `Invalid task status: ${task.status}`,
-    );
+  if (!validStatuses.includes(task.status)) {
+    throw new Error(`Invalid task status: ${task.status}`);
   }
 }

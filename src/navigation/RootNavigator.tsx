@@ -1,136 +1,77 @@
-import React, {
-  useEffect,
-} from 'react';
+import React, { useEffect } from 'react';
 
-import {
-  ActivityIndicator,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
-import {
-  useAppDispatch,
-} from '../hooks/useAppDispatch';
+import { useAppDispatch } from '../hooks/useAppDispatch';
 
-import {
-  useAppSelector,
-} from '../hooks/useAppSelector';
+import { useAppSelector } from '../hooks/useAppSelector';
 
-import {
-  authStateChanged,
-} from '../features/auth/authSlice';
+import { authStateChanged } from '../features/auth/authSlice';
 
 import {
   selectAuthInitialized,
   selectIsAuthenticated,
 } from '../features/auth/authSelectors';
 
-import {
-  authService,
-} from '../features/auth/authService';
+import { authService } from '../features/auth/authService';
 
-import {
-  AuthNavigator,
-} from './AuthNavigator';
+import { AuthNavigator } from './AuthNavigator';
 
-import {
-  AppNavigator,
-} from './AppNavigator';
+import { AppNavigator } from './AppNavigator';
 
-import {
-  lightTheme,
-} from '../theme/lightTheme';
+import { lightTheme } from '../theme/lightTheme';
 
-import {
-  startSyncListener,
-} from '../features/sync/syncService';
+import { startSyncListener } from '../features/sync/syncService';
 
-import {
-  SyncStatusBanner,
-} from '../features/sync/SyncStatusBanner';
+import { SyncStatusBanner } from '../features/sync/SyncStatusBanner';
 
-import {
-  refreshTasks,
-} from '../features/tasks/taskSlice';
-
+import { refreshTasks } from '../features/tasks/taskSlice';
 
 export function RootNavigator() {
+  const dispatch = useAppDispatch();
 
-  const dispatch =
-    useAppDispatch();
+  const initialized = useAppSelector(selectAuthInitialized);
 
-
-  const initialized =
-    useAppSelector(
-      selectAuthInitialized,
-    );
-
-
-  const isAuthenticated =
-    useAppSelector(
-      selectIsAuthenticated,
-    );
-
+  const isAuthenticated = useAppSelector(selectIsAuthenticated);
 
   /* ================================================= */
   /* FIREBASE AUTH LISTENER                            */
   /* ================================================= */
 
   useEffect(() => {
+    const unsubscribe = authService.subscribe(user => {
+      dispatch(
+        authStateChanged(
+          user
+            ? {
+                id: user.uid,
 
-    const unsubscribe =
-      authService.subscribe(
-        user => {
+                email: user.email,
 
-          dispatch(
-            authStateChanged(
-              user
-                ? {
-                    id:
-                      user.uid,
-
-                    email:
-                      user.email,
-
-                    displayName:
-                      user.displayName,
-                  }
-                : null,
-            ),
-          );
-        },
+                displayName: user.displayName,
+              }
+            : null,
+        ),
       );
-
+    });
 
     return unsubscribe;
-
-  }, [
-    dispatch,
-  ]);
-
+  }, [dispatch]);
 
   /* ================================================= */
   /* TASK / FIRESTORE SYNC LISTENER                   */
   /* ================================================= */
 
   useEffect(() => {
-
     /*
      * Do not start synchronization when
      * the user is logged out.
      */
-    if (
-      !isAuthenticated
-    ) {
-
+    if (!isAuthenticated) {
       return;
     }
 
-
-    console.log(
-      'SYNC: Starting task sync listener...',
-    );
-
+    console.log('SYNC: Starting task sync listener...');
 
     /*
      * IMPORTANT:
@@ -157,122 +98,66 @@ export function RootNavigator() {
      *    ↓
      * UI = 5
      */
-    const unsubscribe =
-      startSyncListener(
-        () => {
+    const unsubscribe = startSyncListener(() => {
+      console.log('SYNC: Refreshing Redux from SQLite...');
 
-          console.log(
-            'SYNC: Refreshing Redux from SQLite...',
-          );
-
-
-          void dispatch(
-            refreshTasks(),
-          );
-
-        },
-      );
-
+      void dispatch(refreshTasks());
+    });
 
     return unsubscribe;
-
-  }, [
-    isAuthenticated,
-    dispatch,
-  ]);
-
+  }, [isAuthenticated, dispatch]);
 
   /* ================================================= */
   /* AUTH INITIALIZATION                               */
   /* ================================================= */
 
-  if (
-    !initialized
-  ) {
-
+  if (!initialized) {
     return (
-      <View
-        style={
-          styles.loadingContainer
-        }
-      >
-
-        <ActivityIndicator
-          size="large"
-          color={
-            lightTheme.colors.primary
-          }
-        />
-
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={lightTheme.colors.primary} />
       </View>
     );
   }
-
 
   /* ================================================= */
   /* NAVIGATION                                        */
   /* ================================================= */
 
   return (
-    <View
-      style={
-        styles.root
-      }
-    >
-
+    <View style={styles.root}>
       {/* ================================================= */}
       {/* SYNC STATUS                                       */}
       {/* ================================================= */}
 
       <SyncStatusBanner />
 
-
       {/* ================================================= */}
       {/* AUTH / APP NAVIGATION                             */}
       {/* ================================================= */}
 
-      {isAuthenticated ? (
-
-        <AppNavigator />
-
-      ) : (
-
-        <AuthNavigator />
-
-      )}
-
+      {isAuthenticated ? <AppNavigator /> : <AuthNavigator />}
     </View>
   );
 }
-
 
 /* ================================================= */
 /* STYLES                                            */
 /* ================================================= */
 
-const styles =
-  StyleSheet.create({
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
 
-    root: {
+    backgroundColor: lightTheme.colors.background,
+  },
 
-      flex: 1,
+  loadingContainer: {
+    flex: 1,
 
-      backgroundColor:
-        lightTheme.colors.background,
-    },
+    alignItems: 'center',
 
+    justifyContent: 'center',
 
-    loadingContainer: {
-
-      flex: 1,
-
-      alignItems:
-        'center',
-
-      justifyContent:
-        'center',
-
-      backgroundColor:
-        lightTheme.colors.background,
-    },
-  });
+    backgroundColor: lightTheme.colors.background,
+  },
+});

@@ -1,9 +1,8 @@
-import {createSelector} from '@reduxjs/toolkit';
+import { createSelector } from '@reduxjs/toolkit';
 
-import type {RootState} from '../../app/store';
+import type { RootState } from '../../app/store';
 
-const selectTaskState = (state: RootState) =>
-  state.tasks;
+const selectTaskState = (state: RootState) => state.tasks;
 
 export const selectTasks = createSelector(
   [selectTaskState],
@@ -15,20 +14,12 @@ export const selectTaskFilter = createSelector(
   taskState => taskState.filter,
 );
 
-export const selectCompletedTasks = createSelector(
-  [selectTasks],
-  tasks =>
-    tasks.filter(
-      task => task.status === 'completed',
-    ),
+export const selectCompletedTasks = createSelector([selectTasks], tasks =>
+  tasks.filter(task => task.status === 'completed'),
 );
 
-export const selectPendingTasks = createSelector(
-  [selectTasks],
-  tasks =>
-    tasks.filter(
-      task => task.status === 'pending',
-    ),
+export const selectPendingTasks = createSelector([selectTasks], tasks =>
+  tasks.filter(task => task.status === 'pending'),
 );
 
 export const selectTaskCount = createSelector(
@@ -48,8 +39,7 @@ export const selectRemainingCount = createSelector(
 
 export const selectProgress = createSelector(
   [selectTaskCount, selectCompletedCount],
-  (total, completed) =>
-    total === 0 ? 0 : completed / total,
+  (total, completed) => (total === 0 ? 0 : completed / total),
 );
 
 export const selectVisibleTasks = createSelector(
@@ -58,14 +48,10 @@ export const selectVisibleTasks = createSelector(
   (tasks, filter) => {
     switch (filter) {
       case 'today':
-        return tasks.filter(
-          task => task.dueDate === 'Today',
-        );
+        return tasks.filter(task => task.dueDate === 'Today');
 
       case 'upcoming':
-        return tasks.filter(
-          task => task.dueDate !== 'Today',
-        );
+        return tasks.filter(task => task.dueDate !== 'Today');
 
       case 'all':
       default:

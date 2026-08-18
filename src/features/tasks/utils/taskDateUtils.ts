@@ -21,7 +21,20 @@ export function parseTaskDate(value?: string): Date | null {
   const day = Number(parts[0]);
   const month = parts[1];
   const year = Number(parts[2]);
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
   const monthIndex = months.findIndex(
     item => item.toLowerCase() === month.toLowerCase(),
   );

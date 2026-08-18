@@ -7,12 +7,7 @@ export interface AuthUser {
 export interface AuthState {
   user: AuthUser | null;
 
-  status:
-    | 'idle'
-    | 'loading'
-    | 'authenticated'
-    | 'unauthenticated'
-    | 'error';
+  status: 'idle' | 'loading' | 'authenticated' | 'unauthenticated' | 'error';
 
   initialized: boolean;
 

@@ -1,30 +1,14 @@
-import React, {
-  Suspense,
-  lazy,
-} from 'react';
+import React, { Suspense, lazy } from 'react';
 
-import {
-  createBottomTabNavigator,
-} from '@react-navigation/bottom-tabs';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
-import {
-  createNativeStackNavigator,
-} from '@react-navigation/native-stack';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-import {
-  ActivityIndicator,
-  Text,
-  View,
-  StyleSheet,
-} from 'react-native';
+import { ActivityIndicator, Text, View, StyleSheet } from 'react-native';
 
-import {
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Task } from '../features/tasks/types';
-import {
-  useTheme,
-} from '../app/providers/ThemeProvider';
+import { useTheme } from '../app/providers/ThemeProvider';
 
 /* ================================================= */
 /* LAZY LOADED SCREENS                               */
@@ -37,31 +21,22 @@ import {
  * and avoids eagerly evaluating every screen module.
  */
 
-const LazyTasksScreen = lazy(
-  () =>
-    import(
-      '../features/tasks/screens/TasksScreen'
-    ).then(module => ({
-      default: module.TasksScreen,
-    })),
+const LazyTasksScreen = lazy(() =>
+  import('../features/tasks/screens/TasksScreen').then(module => ({
+    default: module.TasksScreen,
+  })),
 );
 
-const LazySettingsScreen = lazy(
-  () =>
-    import(
-      '../features/settings/screens/SettingsScreen'
-    ).then(module => ({
-      default: module.SettingsScreen,
-    })),
+const LazySettingsScreen = lazy(() =>
+  import('../features/settings/screens/SettingsScreen').then(module => ({
+    default: module.SettingsScreen,
+  })),
 );
 
-const LazyTaskFormScreen = lazy(
-  () =>
-    import(
-      '../features/tasks/components/TaskFormSheet'
-    ).then(module => ({
-      default: module.TaskFormSheet,
-    }))
+const LazyTaskFormScreen = lazy(() =>
+  import('../features/tasks/components/TaskFormSheet').then(module => ({
+    default: module.TaskFormSheet,
+  })),
 );
 
 /* ================================================= */
@@ -75,46 +50,36 @@ export type AppTabParamList = {
 
 export type AppStackParamList = {
   MainTabs: undefined;
-  TaskForm: {
-    task?: Task | null;
-  } | undefined;
+  TaskForm:
+    | {
+        task?: Task | null;
+      }
+    | undefined;
 };
 /* ================================================= */
 /* NAVIGATORS                                        */
 /* ================================================= */
 
-const Tab =
-  createBottomTabNavigator<AppTabParamList>();
+const Tab = createBottomTabNavigator<AppTabParamList>();
 
-const Stack =
-  createNativeStackNavigator<AppStackParamList>();
+const Stack = createNativeStackNavigator<AppStackParamList>();
 
 /* ================================================= */
 /* LAZY SCREEN LOADING                               */
 /* ================================================= */
 
-type AppTheme =
-  ReturnType<typeof useTheme>['theme'];
+type AppTheme = ReturnType<typeof useTheme>['theme'];
 
 function ScreenLoader() {
+  const { theme } = useTheme();
 
-  const {
-    theme,
-  } = useTheme();
-
-  const styles =
-    createStyles(theme);
+  const styles = createStyles(theme);
 
   return (
     <View style={styles.loadingContainer}>
-      <ActivityIndicator
-        size="large"
-        color="#1769E0"
-      />
+      <ActivityIndicator size="large" color="#1769E0" />
 
-      <Text style={styles.loadingText}>
-        Loading...
-      </Text>
+      <Text style={styles.loadingText}>Loading...</Text>
     </View>
   );
 }
@@ -130,32 +95,14 @@ function TabIcon({
   name: 'tasks' | 'settings';
   focused: boolean;
 }) {
+  const { theme } = useTheme();
 
-  const {
-    theme,
-  } = useTheme();
-
-  const styles =
-    createStyles(theme);
+  const styles = createStyles(theme);
 
   return (
-    <View
-      style={[
-        styles.iconContainer,
-        focused &&
-        styles.iconContainerActive,
-      ]}
-    >
-      <Text
-        style={[
-          styles.icon,
-          focused &&
-          styles.iconActive,
-        ]}
-      >
-        {name === 'tasks'
-          ? '✓'
-          : '⚙'}
+    <View style={[styles.iconContainer, focused && styles.iconContainerActive]}>
+      <Text style={[styles.icon, focused && styles.iconActive]}>
+        {name === 'tasks' ? '✓' : '⚙'}
       </Text>
     </View>
   );
@@ -166,12 +113,9 @@ function TabIcon({
 /* ================================================= */
 
 function MainTabs() {
-  const {
-    theme,
-  } = useTheme();
+  const { theme } = useTheme();
 
-  const styles =
-    createStyles(theme);
+  const styles = createStyles(theme);
 
   /*
    * Get the device's actual bottom safe area.
@@ -181,8 +125,7 @@ function MainTabs() {
    * - Back button
    * - Gesture navigation area
    */
-  const insets =
-    useSafeAreaInsets();
+  const insets = useSafeAreaInsets();
 
   /*
    * Keep the original visible tab content
@@ -194,14 +137,11 @@ function MainTabs() {
    * Add the device's safe-area height
    * to the tab bar.
    */
-  const tabBarHeight =
-    TAB_CONTENT_HEIGHT +
-    insets.bottom;
+  const tabBarHeight = TAB_CONTENT_HEIGHT + insets.bottom;
 
   return (
     <Tab.Navigator
       initialRouteName="Tasks"
-
       /*
        * Bottom tabs already support lazy
        * rendering. Keep this explicitly enabled
@@ -212,11 +152,9 @@ function MainTabs() {
 
         lazy: true,
 
-        tabBarActiveTintColor:
-          theme.colors.primary,
+        tabBarActiveTintColor: theme.colors.primary,
 
-        tabBarInactiveTintColor:
-          theme.colors.textMuted,
+        tabBarInactiveTintColor: theme.colors.textMuted,
 
         tabBarShowLabel: true,
 
@@ -231,21 +169,17 @@ function MainTabs() {
 
           paddingTop: 6,
 
-          paddingBottom:
-            insets.bottom + 7,
+          paddingBottom: insets.bottom + 7,
 
-          backgroundColor:
-            theme.colors.surface,
+          backgroundColor: theme.colors.surface,
 
           borderTopWidth: 1,
 
-          borderTopColor:
-            theme.colors.border,
+          borderTopColor: theme.colors.border,
 
           elevation: 12,
 
-          shadowColor:
-            '#000000',
+          shadowColor: '#000000',
 
           shadowOffset: {
             width: 0,
@@ -258,7 +192,6 @@ function MainTabs() {
         },
       }}
     >
-
       {/* ================================================= */}
       {/* TASKS                                             */}
       {/* ================================================= */}
@@ -268,20 +201,13 @@ function MainTabs() {
         options={{
           tabBarLabel: 'Tasks',
 
-          tabBarIcon: ({
-            focused,
-          }) => (
-            <TabIcon
-              name="tasks"
-              focused={focused}
-            />
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="tasks" focused={focused} />
           ),
         }}
       >
         {() => (
-          <Suspense
-            fallback={<ScreenLoader />}
-          >
+          <Suspense fallback={<ScreenLoader />}>
             <LazyTasksScreen />
           </Suspense>
         )}
@@ -296,25 +222,17 @@ function MainTabs() {
         options={{
           tabBarLabel: 'Settings',
 
-          tabBarIcon: ({
-            focused,
-          }) => (
-            <TabIcon
-              name="settings"
-              focused={focused}
-            />
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="settings" focused={focused} />
           ),
         }}
       >
         {() => (
-          <Suspense
-            fallback={<ScreenLoader />}
-          >
+          <Suspense fallback={<ScreenLoader />}>
             <LazySettingsScreen />
           </Suspense>
         )}
       </Tab.Screen>
-
     </Tab.Navigator>
   );
 }
@@ -324,13 +242,9 @@ function MainTabs() {
 /* ================================================= */
 
 export function AppNavigator() {
+  const { theme } = useTheme();
 
-  const {
-    theme,
-  } = useTheme();
-
-  const styles =
-    createStyles(theme);
+  const styles = createStyles(theme);
 
   return (
     <Stack.Navigator
@@ -338,15 +252,11 @@ export function AppNavigator() {
         headerShown: false,
       }}
     >
-
       {/* ================================================= */}
       {/* MAIN TABS                                         */}
       {/* ================================================= */}
 
-      <Stack.Screen
-        name="MainTabs"
-        component={MainTabs}
-      />
+      <Stack.Screen name="MainTabs" component={MainTabs} />
 
       {/* ============================================================ */}
       {/* TASK FORM                                                     */}
@@ -385,7 +295,6 @@ export function AppNavigator() {
           </Suspense>
         )}
       </Stack.Screen>
-
     </Stack.Navigator>
   );
 }
@@ -394,65 +303,59 @@ export function AppNavigator() {
 /* STYLES                                            */
 /* ================================================= */
 
-const createStyles = (
-  theme: AppTheme,
-) =>
+const createStyles = (theme: AppTheme) =>
   StyleSheet.create({
+    /* ================================================= */
+    /* LAZY LOADING                                     */
+    /* ================================================= */
 
-  /* ================================================= */
-  /* LAZY LOADING                                     */
-  /* ================================================= */
+    loadingContainer: {
+      flex: 1,
 
-  loadingContainer: {
-    flex: 1,
+      alignItems: 'center',
 
-    alignItems: 'center',
+      justifyContent: 'center',
 
-    justifyContent: 'center',
+      backgroundColor: theme.colors.background,
+    },
 
-    backgroundColor:
-      theme.colors.background,
-  },
+    loadingText: {
+      marginTop: 10,
 
-  loadingText: {
-    marginTop: 10,
+      fontSize: 13,
 
-    fontSize: 13,
+      color: theme.colors.textSecondary,
 
-    color: theme.colors.textSecondary,
+      fontWeight: '600',
+    },
 
-    fontWeight: '600',
-  },
+    /* ================================================= */
+    /* TAB ICON                                          */
+    /* ================================================= */
 
-  /* ================================================= */
-  /* TAB ICON                                          */
-  /* ================================================= */
+    iconContainer: {
+      width: 32,
+      height: 28,
 
-  iconContainer: {
-    width: 32,
-    height: 28,
+      borderRadius: 10,
 
-    borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
 
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+    iconContainerActive: {
+      backgroundColor: theme.colors.primarySoft,
+    },
 
-  iconContainerActive: {
-    backgroundColor:
-      theme.colors.primarySoft,
-  },
+    icon: {
+      fontSize: 18,
 
-  icon: {
-    fontSize: 18,
+      color: theme.colors.textMuted,
 
-    color: theme.colors.textMuted,
+      fontWeight: '700',
+    },
 
-    fontWeight: '700',
-  },
-
-  iconActive: {
-    color: theme.colors.primary,
-  },
-
-});
+    iconActive: {
+      color: theme.colors.primary,
+    },
+  });

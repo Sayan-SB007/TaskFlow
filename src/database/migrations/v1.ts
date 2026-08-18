@@ -1,8 +1,6 @@
-import type {DB} from '@op-engineering/op-sqlite';
+import type { DB } from '@op-engineering/op-sqlite';
 
-export default async function migrateV1(
-  db: DB,
-) {
+export default async function migrateV1(db: DB) {
   await db.transaction(async tx => {
     /*
      * Tasks are the local source of truth.

@@ -1,36 +1,18 @@
 import React from 'react';
 
-import {
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import {
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import FontAwesome6 from
-  '@react-native-vector-icons/fontawesome6/static';
+import FontAwesome6 from '@react-native-vector-icons/fontawesome6/static';
 
-import type {
-  Task,
-} from '../types';
+import type { Task } from '../types';
 
-import {
-  useTheme,
-} from '../../../app/providers/ThemeProvider';
+import { useTheme } from '../../../app/providers/ThemeProvider';
 
-import {
-  spacing,
-} from '../../../theme/spacing';
+import { spacing } from '../../../theme/spacing';
 
-import {
-  typography,
-} from '../../../theme/typography';
-
+import { typography } from '../../../theme/typography';
 
 /* ================================================= */
 /* TYPES                                             */
@@ -45,7 +27,6 @@ interface TaskDetailsSheetProps {
   onDelete: (task: Task) => void;
 }
 
-
 /* ================================================= */
 /* COMPONENT                                         */
 /* ================================================= */
@@ -58,17 +39,11 @@ export function TaskDetailsSheet({
   onToggle,
   onDelete,
 }: TaskDetailsSheetProps) {
+  const insets = useSafeAreaInsets();
 
-  const insets =
-    useSafeAreaInsets();
+  const { theme } = useTheme();
 
-  const {
-    theme,
-  } = useTheme();
-
-  const styles =
-    createStyles(theme);
-
+  const styles = createStyles(theme);
 
   /*
    * Keep hooks above the conditional return.
@@ -79,49 +54,22 @@ export function TaskDetailsSheet({
     return null;
   }
 
-
-  const completed =
-    task.status ===
-    'completed';
-
+  const completed = task.status === 'completed';
 
   return (
     <Modal
-      visible={
-        visible
-      }
-
+      visible={visible}
       transparent
-
       animationType="slide"
-
       statusBarTranslucent
-
-      onRequestClose={
-        onClose
-      }
+      onRequestClose={onClose}
     >
-
-      <View
-        style={
-          styles.overlay
-        }
-      >
-
+      <View style={styles.overlay}>
         {/* ================================================= */}
         {/* BACKDROP                                           */}
         {/* ================================================= */}
 
-        <Pressable
-          style={
-            styles.backdrop
-          }
-
-          onPress={
-            onClose
-          }
-        />
-
+        <Pressable style={styles.backdrop} onPress={onClose} />
 
         {/* ================================================= */}
         {/* SHEET                                              */}
@@ -132,373 +80,194 @@ export function TaskDetailsSheet({
             styles.sheet,
 
             {
-              paddingBottom:
-                Math.max(
-                  insets.bottom,
-                  12,
-                ) + 12,
+              paddingBottom: Math.max(insets.bottom, 12) + 12,
             },
           ]}
         >
-
           {/* ================================================= */}
           {/* HANDLE                                             */}
           {/* ================================================= */}
 
-          <View
-            style={
-              styles.handle
-            }
-          />
-
+          <View style={styles.handle} />
 
           {/* ================================================= */}
           {/* HEADER                                             */}
           {/* ================================================= */}
 
-          <View
-            style={
-              styles.header
-            }
-          >
+          <View style={styles.header}>
+            <View style={styles.headerContent}>
+              <Text style={styles.headerTitle}>Task details</Text>
 
-            <View
-              style={
-                styles.headerContent
-              }
-            >
-
-              <Text
-                style={
-                  styles.headerTitle
-                }
-              >
-                Task details
-              </Text>
-
-
-              <Text
-                style={
-                  styles.subtitle
-                }
-              >
-                View and manage your task
-              </Text>
-
+              <Text style={styles.subtitle}>View and manage your task</Text>
             </View>
-
 
             {/* ================================================= */}
             {/* CLOSE                                             */}
             {/* ================================================= */}
 
             <Pressable
-              onPress={
-                onClose
-              }
-
-              style={
-                styles.closeButton
-              }
-
+              onPress={onClose}
+              style={styles.closeButton}
               accessibilityRole="button"
-
-              accessibilityLabel={
-                'Close task details'
-              }
+              accessibilityLabel={'Close task details'}
             >
-
               <FontAwesome6
                 name="xmark"
                 size={18}
-                color={
-                  theme.colors
-                    .textSecondary
-                }
+                color={theme.colors.textSecondary}
                 iconStyle="solid"
               />
-
             </Pressable>
-
           </View>
-
 
           {/* ================================================= */}
           {/* TASK INFORMATION                                  */}
           {/* ================================================= */}
 
-          <View
-            style={
-              styles.taskRow
-            }
-          >
-
+          <View style={styles.taskRow}>
             {/* STATUS */}
 
             <View
               style={[
                 styles.statusCircle,
 
-                completed &&
-                  styles.statusCircleCompleted,
+                completed && styles.statusCircleCompleted,
               ]}
             >
-
               {completed ? (
-
                 <FontAwesome6
                   name="check"
                   size={15}
                   color="#FFFFFF"
                   iconStyle="solid"
                 />
-
               ) : null}
-
             </View>
-
 
             {/* CONTENT */}
 
-            <View
-              style={
-                styles.taskContent
-              }
-            >
-
+            <View style={styles.taskContent}>
               <Text
-                style={[
-                  styles.taskTitle,
-
-                  completed &&
-                    styles.completedTitle,
-                ]}
+                style={[styles.taskTitle, completed && styles.completedTitle]}
               >
-                {
-                  task.title
-                }
+                {task.title}
               </Text>
 
-
               {task.description ? (
-
-                <Text
-                  style={
-                    styles.description
-                  }
-                >
-                  {
-                    task.description
-                  }
-                </Text>
-
+                <Text style={styles.description}>{task.description}</Text>
               ) : (
-
-                <Text
-                  style={
-                    styles.emptyDescription
-                  }
-                >
+                <Text style={styles.emptyDescription}>
                   No description added.
                 </Text>
-
               )}
-
             </View>
-
           </View>
-
 
           {/* ================================================= */}
           {/* METADATA                                          */}
           {/* ================================================= */}
 
-          <View
-            style={
-              styles.metadataCard
-            }
-          >
-
+          <View style={styles.metadataCard}>
             <MetadataItem
               label="DUE DATE"
-              value={
-                task.dueDate ||
-                'Not set'
-              }
+              value={task.dueDate || 'Not set'}
               theme={theme}
             />
-
 
             <MetadataItem
               label="TIME"
-              value={
-                task.dueTime ||
-                'Not set'
-              }
+              value={task.dueTime || 'Not set'}
               theme={theme}
             />
-
 
             <MetadataItem
               label="PRIORITY"
-              value={
-                capitalize(
-                  task.priority,
-                )
-              }
-              priority={
-                task.priority
-              }
+              value={capitalize(task.priority)}
+              priority={task.priority}
               theme={theme}
             />
-
           </View>
-
 
           {/* ================================================= */}
           {/* ACTIONS                                           */}
           {/* ================================================= */}
 
-          <View
-            style={
-              styles.actions
-            }
-          >
-
+          <View style={styles.actions}>
             {/* ================================================= */}
             {/* COMPLETE / INCOMPLETE                             */}
             {/* ================================================= */}
 
             <Pressable
-              onPress={() =>
-                onToggle(
-                  task,
-                )
-              }
-
-              style={({pressed}) => [
+              onPress={() => onToggle(task)}
+              style={({ pressed }) => [
                 styles.primaryButton,
 
-                completed &&
-                  styles.completedButton,
+                completed && styles.completedButton,
 
-                pressed &&
-                  styles.buttonPressed,
+                pressed && styles.buttonPressed,
               ]}
-
               accessibilityRole="button"
-
               accessibilityLabel={
-                completed
-                  ? 'Mark task as incomplete'
-                  : 'Mark task as complete'
+                completed ? 'Mark task as incomplete' : 'Mark task as complete'
               }
             >
-
               <Text
                 style={[
                   styles.primaryButtonText,
 
-                  completed &&
-                    styles.completedButtonText,
+                  completed && styles.completedButtonText,
                 ]}
               >
-                {
-                  completed
-                    ? 'Mark as incomplete'
-                    : 'Mark as complete'
-                }
+                {completed ? 'Mark as incomplete' : 'Mark as complete'}
               </Text>
-
             </Pressable>
-
 
             {/* ================================================= */}
             {/* EDIT                                               */}
             {/* ================================================= */}
 
             <Pressable
-              onPress={() =>
-                onEdit(
-                  task,
-                )
-              }
-
-              style={({pressed}) => [
+              onPress={() => onEdit(task)}
+              style={({ pressed }) => [
                 styles.secondaryButton,
 
-                pressed &&
-                  styles.buttonPressed,
+                pressed && styles.buttonPressed,
               ]}
-
               accessibilityRole="button"
-
               accessibilityLabel="Edit task"
             >
-
-              <Text
-                style={
-                  styles.secondaryButtonText
-                }
-              >
-                Edit task
-              </Text>
-
+              <Text style={styles.secondaryButtonText}>Edit task</Text>
             </Pressable>
-
 
             {/* ================================================= */}
             {/* DELETE                                             */}
             {/* ================================================= */}
 
             <Pressable
-              onPress={() =>
-                onDelete(
-                  task,
-                )
-              }
-
-              style={({pressed}) => [
+              onPress={() => onDelete(task)}
+              style={({ pressed }) => [
                 styles.deleteButton,
 
-                pressed &&
-                  styles.deletePressed,
+                pressed && styles.deletePressed,
               ]}
-
               accessibilityRole="button"
-
               accessibilityLabel="Delete task"
             >
-
               <FontAwesome6
                 name="trash"
                 size={14}
-                color={
-                  theme.colors.danger
-                }
+                color={theme.colors.danger}
                 iconStyle="solid"
               />
 
-              <Text
-                style={
-                  styles.deleteText
-                }
-              >
-                Delete task
-              </Text>
-
+              <Text style={styles.deleteText}>Delete task</Text>
             </Pressable>
-
           </View>
-
         </View>
-
       </View>
-
     </Modal>
   );
 }
-
 
 /* ================================================= */
 /* METADATA ITEM                                     */
@@ -511,109 +280,51 @@ interface MetadataItemProps {
   theme: ReturnType<typeof useTheme>['theme'];
 }
 
-
-function MetadataItem({
-  label,
-  value,
-  priority,
-  theme,
-}: MetadataItemProps) {
-
-  const styles =
-    createStyles(theme);
+function MetadataItem({ label, value, priority, theme }: MetadataItemProps) {
+  const styles = createStyles(theme);
 
   return (
-    <View
-      style={
-        styles.metadataItem
-      }
-    >
+    <View style={styles.metadataItem}>
+      <Text style={styles.metadataLabel}>{label}</Text>
 
-      <Text
-        style={
-          styles.metadataLabel
-        }
-      >
-        {
-          label
-        }
-      </Text>
-
-
-      <View
-        style={
-          styles.metadataValueRow
-        }
-      >
-
+      <View style={styles.metadataValueRow}>
         {priority ? (
-
           <View
             style={[
               styles.priorityDot,
 
               {
-                backgroundColor:
-                  getPriorityColor(
-                    theme,
-                    priority,
-                  ),
+                backgroundColor: getPriorityColor(theme, priority),
               },
             ]}
           />
-
         ) : null}
 
-
-        <Text
-          numberOfLines={
-            1
-          }
-
-          style={
-            styles.metadataValue
-          }
-        >
-          {
-            value
-          }
+        <Text numberOfLines={1} style={styles.metadataValue}>
+          {value}
         </Text>
-
       </View>
-
     </View>
   );
 }
-
 
 /* ================================================= */
 /* HELPERS                                           */
 /* ================================================= */
 
-function capitalize(
-  value: string,
-): string {
-
+function capitalize(value: string): string {
   if (!value) {
     return '';
   }
 
-  return (
-    value.charAt(0).toUpperCase() +
-    value.slice(1)
-  );
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
-
 
 function getPriorityColor(
   theme: ReturnType<typeof useTheme>['theme'],
   priority: Task['priority'],
 ) {
-
-  switch (
-    priority
-  ) {
-
+  switch (priority) {
     case 'high':
       return theme.colors.danger;
 
@@ -626,16 +337,12 @@ function getPriorityColor(
   }
 }
 
-
 /* ================================================= */
 /* STYLES                                            */
 /* ================================================= */
 
-const createStyles = (
-  theme: ReturnType<typeof useTheme>['theme'],
-) =>
+const createStyles = (theme: ReturnType<typeof useTheme>['theme']) =>
   StyleSheet.create({
-
     /* ================================================= */
     /* OVERLAY                                           */
     /* ================================================= */
@@ -643,18 +350,15 @@ const createStyles = (
     overlay: {
       flex: 1,
 
-      justifyContent:
-        'flex-end',
+      justifyContent: 'flex-end',
 
       /*
        * Same backdrop as Create Task.
        * Keeping the dim layer on the full modal container
        * makes the sheet clearly appear above the task list.
        */
-      backgroundColor:
-        theme.colors.overlay,
+      backgroundColor: theme.colors.overlay,
     },
-
 
     /* ================================================= */
     /* BACKDROP                                          */
@@ -667,39 +371,29 @@ const createStyles = (
        * The overlay supplies the dimming.
        * This view only catches outside presses.
        */
-      backgroundColor:
-        'transparent',
+      backgroundColor: 'transparent',
     },
-
 
     /* ================================================= */
     /* SHEET                                             */
     /* ================================================= */
 
     sheet: {
-      width:
-        '100%',
+      width: '100%',
 
-      maxHeight:
-        '88%',
+      maxHeight: '88%',
 
-      backgroundColor:
-        theme.colors.surface,
+      backgroundColor: theme.colors.surface,
 
-      borderTopLeftRadius:
-        28,
+      borderTopLeftRadius: 28,
 
-      borderTopRightRadius:
-        28,
+      borderTopRightRadius: 28,
 
-      paddingTop:
-        spacing.md,
+      paddingTop: spacing.md,
 
-      elevation:
-        24,
+      elevation: 24,
 
-      shadowColor:
-        '#000000',
+      shadowColor: '#000000',
 
       shadowOffset: {
         width: 0,
@@ -707,173 +401,124 @@ const createStyles = (
         height: -8,
       },
 
-      shadowOpacity:
-        0.18,
+      shadowOpacity: 0.18,
 
-      shadowRadius:
-        20,
+      shadowRadius: 20,
       /*
        * Keep the rounded top corners clean.
        */
       overflow: 'hidden',
     },
 
-
     /* ================================================= */
     /* HANDLE                                             */
     /* ================================================= */
 
     handle: {
-      alignSelf:
-        'center',
+      alignSelf: 'center',
 
-      width:
-        42,
+      width: 42,
 
-      height:
-        4,
+      height: 4,
 
-      borderRadius:
-        2,
+      borderRadius: 2,
 
-      backgroundColor:
-        theme.colors.border,
+      backgroundColor: theme.colors.border,
 
-      marginBottom:
-        spacing.lg,
+      marginBottom: spacing.lg,
     },
-
 
     /* ================================================= */
     /* HEADER                                             */
     /* ================================================= */
 
     header: {
-      flexDirection:
-        'row',
+      flexDirection: 'row',
 
-      alignItems:
-        'center',
+      alignItems: 'center',
 
-      justifyContent:
-        'space-between',
+      justifyContent: 'space-between',
 
-      paddingHorizontal:
-        spacing.xl,
+      paddingHorizontal: spacing.xl,
 
-      paddingBottom:
-        spacing.lg,
+      paddingBottom: spacing.lg,
     },
-
 
     headerContent: {
       flex: 1,
 
-      paddingRight:
-        spacing.md,
+      paddingRight: spacing.md,
     },
-
 
     headerTitle: {
       ...typography.title,
 
-      color:
-        theme.colors.text,
+      color: theme.colors.text,
     },
-
 
     subtitle: {
       ...typography.caption,
 
-      color:
-        theme.colors.textSecondary,
+      color: theme.colors.textSecondary,
 
-      marginTop:
-        spacing.xs,
+      marginTop: spacing.xs,
     },
-
 
     closeButton: {
-      width:
-        40,
+      width: 40,
 
-      height:
-        40,
+      height: 40,
 
-      borderRadius:
-        20,
+      borderRadius: 20,
 
-      backgroundColor:
-        theme.colors.background,
+      backgroundColor: theme.colors.background,
 
-      alignItems:
-        'center',
+      alignItems: 'center',
 
-      justifyContent:
-        'center',
+      justifyContent: 'center',
 
-      borderWidth:
-        1,
+      borderWidth: 1,
 
-      borderColor:
-        theme.colors.border,
+      borderColor: theme.colors.border,
     },
-
 
     /* ================================================= */
     /* TASK                                               */
     /* ================================================= */
 
     taskRow: {
-      flexDirection:
-        'row',
+      flexDirection: 'row',
 
-      paddingHorizontal:
-        spacing.xl,
+      paddingHorizontal: spacing.xl,
 
-      marginBottom:
-        spacing.xxl,
+      marginBottom: spacing.xxl,
     },
-
 
     statusCircle: {
-      width:
-        32,
+      width: 32,
 
-      height:
-        32,
+      height: 32,
 
-      borderRadius:
-        16,
+      borderRadius: 16,
 
-      borderWidth:
-        1.5,
+      borderWidth: 1.5,
 
-      borderColor:
-        theme.colors.border,
+      borderColor: theme.colors.border,
 
-      alignItems:
-        'center',
+      alignItems: 'center',
 
-      justifyContent:
-        'center',
+      justifyContent: 'center',
 
-      marginTop:
-        2,
+      marginTop: 2,
 
-      marginRight:
-        spacing.md,
+      marginRight: spacing.md,
     },
-
 
     statusCircleCompleted: {
-      backgroundColor:
-        theme.colors.primary,
+      backgroundColor: theme.colors.primary,
 
-      borderColor:
-        theme.colors.primary,
+      borderColor: theme.colors.primary,
     },
-
 
     taskContent: {
       flex: 1,
@@ -881,295 +526,207 @@ const createStyles = (
       minWidth: 0,
     },
 
-
     taskTitle: {
       ...typography.title,
 
-      color:
-        theme.colors.text,
+      color: theme.colors.text,
 
-      lineHeight:
-        25,
+      lineHeight: 25,
     },
-
 
     completedTitle: {
-      textDecorationLine:
-        'line-through',
+      textDecorationLine: 'line-through',
 
-      color:
-        theme.colors.textMuted,
+      color: theme.colors.textMuted,
     },
-
 
     description: {
       ...typography.body,
 
-      color:
-        theme.colors.textSecondary,
+      color: theme.colors.textSecondary,
 
-      lineHeight:
-        22,
+      lineHeight: 22,
 
-      marginTop:
-        spacing.sm,
+      marginTop: spacing.sm,
     },
-
 
     emptyDescription: {
       ...typography.body,
 
-      color:
-        theme.colors.textMuted,
+      color: theme.colors.textMuted,
 
-      fontStyle:
-        'italic',
+      fontStyle: 'italic',
 
-      marginTop:
-        spacing.sm,
+      marginTop: spacing.sm,
     },
-
 
     /* ================================================= */
     /* METADATA                                          */
     /* ================================================= */
 
     metadataCard: {
-      flexDirection:
-        'row',
+      flexDirection: 'row',
 
-      marginHorizontal:
-        spacing.xl,
+      marginHorizontal: spacing.xl,
 
-      backgroundColor:
-        theme.colors.background,
+      backgroundColor: theme.colors.background,
 
-      borderWidth:
-        1,
+      borderWidth: 1,
 
-      borderColor:
-        theme.colors.border,
+      borderColor: theme.colors.border,
 
-      borderRadius:
-        theme.radius.lg,
+      borderRadius: theme.radius.lg,
 
-      paddingHorizontal:
-        spacing.md,
+      paddingHorizontal: spacing.md,
 
-      paddingVertical:
-        spacing.lg,
+      paddingVertical: spacing.lg,
 
-      marginBottom:
-        spacing.xxl,
+      marginBottom: spacing.xxl,
     },
-
 
     metadataItem: {
       flex: 1,
 
-      minWidth:
-        0,
+      minWidth: 0,
     },
-
 
     metadataLabel: {
       ...typography.caption,
 
-      color:
-        theme.colors.textMuted,
+      color: theme.colors.textMuted,
 
-      fontWeight:
-        '700',
+      fontWeight: '700',
 
-      letterSpacing:
-        0.6,
+      letterSpacing: 0.6,
 
-      marginBottom:
-        spacing.xs,
+      marginBottom: spacing.xs,
     },
-
 
     metadataValueRow: {
-      flexDirection:
-        'row',
+      flexDirection: 'row',
 
-      alignItems:
-        'center',
+      alignItems: 'center',
 
-      minWidth:
-        0,
+      minWidth: 0,
     },
-
 
     metadataValue: {
       ...typography.bodyMedium,
 
-      color:
-        theme.colors.text,
+      color: theme.colors.text,
 
-      flexShrink:
-        1,
+      flexShrink: 1,
     },
-
 
     priorityDot: {
-      width:
-        7,
+      width: 7,
 
-      height:
-        7,
+      height: 7,
 
-      borderRadius:
-        4,
+      borderRadius: 4,
 
-      marginRight:
-        6,
+      marginRight: 6,
     },
-
 
     /* ================================================= */
     /* ACTIONS                                           */
     /* ================================================= */
 
     actions: {
-      paddingHorizontal:
-        spacing.xl,
+      paddingHorizontal: spacing.xl,
 
-      gap:
-        spacing.md,
+      gap: spacing.md,
     },
-
 
     primaryButton: {
-      minHeight:
-        54,
+      minHeight: 54,
 
-      borderRadius:
-        theme.radius.md,
+      borderRadius: theme.radius.md,
 
-      backgroundColor:
-        theme.colors.primary,
+      backgroundColor: theme.colors.primary,
 
-      alignItems:
-        'center',
+      alignItems: 'center',
 
-      justifyContent:
-        'center',
+      justifyContent: 'center',
 
-      elevation:
-        2,
+      elevation: 2,
     },
-
 
     primaryButtonText: {
       ...typography.button,
 
-      color:
-        '#FFFFFF',
+      color: '#FFFFFF',
     },
-
 
     completedButton: {
-      backgroundColor:
-        theme.colors.surface,
+      backgroundColor: theme.colors.surface,
 
-      borderWidth:
-        1,
+      borderWidth: 1,
 
-      borderColor:
-        theme.colors.primary,
+      borderColor: theme.colors.primary,
 
-      elevation:
-        0,
+      elevation: 0,
     },
-
 
     completedButtonText: {
-      color:
-        theme.colors.primary,
+      color: theme.colors.primary,
     },
-
 
     secondaryButton: {
-      minHeight:
-        54,
+      minHeight: 54,
 
-      borderRadius:
-        theme.radius.md,
+      borderRadius: theme.radius.md,
 
-      backgroundColor:
-        theme.colors.surface,
+      backgroundColor: theme.colors.surface,
 
-      borderWidth:
-        1,
+      borderWidth: 1,
 
-      borderColor:
-        theme.colors.border,
+      borderColor: theme.colors.border,
 
-      alignItems:
-        'center',
+      alignItems: 'center',
 
-      justifyContent:
-        'center',
+      justifyContent: 'center',
     },
-
 
     secondaryButtonText: {
       ...typography.button,
 
-      color:
-        theme.colors.text,
+      color: theme.colors.text,
     },
-
 
     deleteButton: {
-      minHeight:
-        46,
+      minHeight: 46,
 
-      flexDirection:
-        'row',
+      flexDirection: 'row',
 
-      alignItems:
-        'center',
+      alignItems: 'center',
 
-      justifyContent:
-        'center',
+      justifyContent: 'center',
 
-      gap:
-        spacing.sm,
+      gap: spacing.sm,
 
-      marginTop:
-        spacing.xs,
+      marginTop: spacing.xs,
     },
-
 
     deleteText: {
       ...typography.bodyMedium,
 
-      color:
-        theme.colors.danger,
+      color: theme.colors.danger,
 
-      fontWeight:
-        '600',
+      fontWeight: '600',
     },
 
-
     buttonPressed: {
-      opacity:
-        0.82,
+      opacity: 0.82,
 
       transform: [
         {
-          scale:
-            0.99,
+          scale: 0.99,
         },
       ],
     },
 
-
     deletePressed: {
-      opacity:
-        0.65,
+      opacity: 0.65,
     },
-
   });

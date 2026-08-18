@@ -6,7 +6,7 @@ import notifee, {
   TriggerType,
 } from '@notifee/react-native';
 
-import {Task} from '../tasks/types';
+import { Task } from '../tasks/types';
 
 /* ================================================= */
 /* CONSTANTS                                         */
@@ -43,10 +43,7 @@ export async function createNotificationChannel(): Promise<string> {
 export async function requestNotificationPermission(): Promise<boolean> {
   const settings = await notifee.requestPermission();
 
-  return (
-    settings.authorizationStatus ===
-    AuthorizationStatus.AUTHORIZED
-  );
+  return settings.authorizationStatus === AuthorizationStatus.AUTHORIZED;
 }
 
 /* ================================================= */
@@ -66,9 +63,7 @@ export async function initializeNotifications(): Promise<boolean> {
     const granted = await requestNotificationPermission();
 
     if (!granted) {
-      console.warn(
-        'NOTIFICATION: Permission denied.',
-      );
+      console.warn('NOTIFICATION: Permission denied.');
 
       return false;
     }
@@ -79,16 +74,10 @@ export async function initializeNotifications(): Promise<boolean> {
      * This is important because task reminders use
      * TimestampTrigger + alarmManager.
      */
-    const settings =
-      await notifee.getNotificationSettings();
+    const settings = await notifee.getNotificationSettings();
 
-    if (
-      settings.android?.alarm ===
-      AndroidNotificationSetting.DISABLED
-    ) {
-      console.warn(
-        'NOTIFICATION: Exact alarm permission is disabled.',
-      );
+    if (settings.android?.alarm === AndroidNotificationSetting.DISABLED) {
+      console.warn('NOTIFICATION: Exact alarm permission is disabled.');
 
       /*
        * Notification permission itself is granted,
@@ -102,10 +91,7 @@ export async function initializeNotifications(): Promise<boolean> {
 
     return true;
   } catch (error) {
-    console.warn(
-      'NOTIFICATION: Initialization failed.',
-      error,
-    );
+    console.warn('NOTIFICATION: Initialization failed.', error);
 
     return false;
   }
@@ -125,9 +111,7 @@ export async function initializeNotifications(): Promise<boolean> {
  * into a Date object.
  */
 
-function parseTaskDate(
-  value?: string,
-): Date | null {
+function parseTaskDate(value?: string): Date | null {
   if (!value) {
     return null;
   }
@@ -141,11 +125,7 @@ function parseTaskDate(
     /*
      * Keep today's actual date.
      */
-    return new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate(),
-    );
+    return new Date(today.getFullYear(), today.getMonth(), today.getDate());
   }
 
   /*
@@ -194,28 +174,18 @@ function parseTaskDate(
 
   const monthIndex = months.indexOf(month);
 
-  if (
-    !day ||
-    monthIndex < 0 ||
-    !year
-  ) {
+  if (!day || monthIndex < 0 || !year) {
     return null;
   }
 
-  return new Date(
-    year,
-    monthIndex,
-    day,
-  );
+  return new Date(year, monthIndex, day);
 }
 
 /* ================================================= */
 /* TIME PARSING                                       */
 /* ================================================= */
 
-function parseTaskTime(
-  value?: string,
-): {
+function parseTaskTime(value?: string): {
   hour: number;
   minute: number;
 } | null {
@@ -230,11 +200,7 @@ function parseTaskTime(
    * 10:30 AM
    * 7:45 PM
    */
-  const match = value
-    .trim()
-    .match(
-      /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i,
-    );
+  const match = value.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
 
   if (!match) {
     return null;
@@ -249,32 +215,21 @@ function parseTaskTime(
   /*
    * Basic validation.
    */
-  if (
-    hour < 1 ||
-    hour > 12 ||
-    minute < 0 ||
-    minute > 59
-  ) {
+  if (hour < 1 || hour > 12 || minute < 0 || minute > 59) {
     return null;
   }
 
   /*
    * Convert PM to 24-hour format.
    */
-  if (
-    period === 'PM' &&
-    hour !== 12
-  ) {
+  if (period === 'PM' && hour !== 12) {
     hour += 12;
   }
 
   /*
    * Convert 12 AM to 00.
    */
-  if (
-    period === 'AM' &&
-    hour === 12
-  ) {
+  if (period === 'AM' && hour === 12) {
     hour = 0;
   }
 
@@ -288,9 +243,7 @@ function parseTaskTime(
 /* BUILD REMINDER DATE                                */
 /* ================================================= */
 
-function getTaskReminderDate(
-  task: Task,
-): Date | null {
+function getTaskReminderDate(task: Task): Date | null {
   /*
    * A reminder requires BOTH:
    *
@@ -300,24 +253,17 @@ function getTaskReminderDate(
    * Both fields are optional in your UI.
    */
 
-  if (
-    !task.dueDate ||
-    !task.dueTime
-  ) {
+  if (!task.dueDate || !task.dueTime) {
     return null;
   }
 
-  const date = parseTaskDate(
-    task.dueDate,
-  );
+  const date = parseTaskDate(task.dueDate);
 
   if (!date) {
     return null;
   }
 
-  const time = parseTaskTime(
-    task.dueTime,
-  );
+  const time = parseTaskTime(task.dueTime);
 
   if (!time) {
     return null;
@@ -326,12 +272,7 @@ function getTaskReminderDate(
   /*
    * Apply selected time.
    */
-  date.setHours(
-    time.hour,
-    time.minute,
-    0,
-    0,
-  );
+  date.setHours(time.hour, time.minute, 0, 0);
 
   return date;
 }
@@ -340,9 +281,7 @@ function getTaskReminderDate(
 /* NOTIFICATION ID                                    */
 /* ================================================= */
 
-function getTaskNotificationId(
-  taskId: string,
-): string {
+function getTaskNotificationId(taskId: string): string {
   return `task-reminder-${taskId}`;
 }
 
@@ -365,23 +304,16 @@ function getTaskNotificationId(
 
 async function hasExactAlarmPermission(): Promise<boolean> {
   try {
-    const settings =
-      await notifee.getNotificationSettings();
+    const settings = await notifee.getNotificationSettings();
 
-    const alarmSetting =
-      settings.android?.alarm;
+    const alarmSetting = settings.android?.alarm;
 
     /*
      * If Notifee reports that exact alarms are
      * explicitly disabled, don't schedule.
      */
-    if (
-      alarmSetting ===
-      AndroidNotificationSetting.DISABLED
-    ) {
-      console.warn(
-        'NOTIFICATION: Exact alarm permission is disabled.',
-      );
+    if (alarmSetting === AndroidNotificationSetting.DISABLED) {
+      console.warn('NOTIFICATION: Exact alarm permission is disabled.');
 
       return false;
     }
@@ -405,13 +337,8 @@ async function hasExactAlarmPermission(): Promise<boolean> {
 /* SCHEDULE TASK REMINDER                             */
 /* ================================================= */
 
-export async function scheduleTaskReminder(
-  task: Task,
-): Promise<void> {
-  const notificationId =
-    getTaskNotificationId(
-      task.id,
-    );
+export async function scheduleTaskReminder(task: Task): Promise<void> {
+  const notificationId = getTaskNotificationId(task.id);
 
   /*
    * Always cancel the previous reminder first.
@@ -419,18 +346,13 @@ export async function scheduleTaskReminder(
    * This prevents duplicate notifications when
    * the task is edited.
    */
-  await notifee.cancelNotification(
-    notificationId,
-  );
+  await notifee.cancelNotification(notificationId);
 
   /*
    * Completed tasks should never have
    * an active reminder.
    */
-  if (
-    task.status ===
-    'completed'
-  ) {
+  if (task.status === 'completed') {
     return;
   }
 
@@ -439,10 +361,7 @@ export async function scheduleTaskReminder(
    *
    * Both due date and due time are optional.
    */
-  const reminderDate =
-    getTaskReminderDate(
-      task,
-    );
+  const reminderDate = getTaskReminderDate(task);
 
   /*
    * No date/time means:
@@ -456,19 +375,12 @@ export async function scheduleTaskReminder(
   /*
    * Don't schedule reminders in the past.
    */
-  if (
-    reminderDate.getTime() <=
-    Date.now()
-  ) {
-    console.warn(
-      'NOTIFICATION: Task reminder time is in the past.',
-      {
-        taskId: task.id,
+  if (reminderDate.getTime() <= Date.now()) {
+    console.warn('NOTIFICATION: Task reminder time is in the past.', {
+      taskId: task.id,
 
-        reminderAt:
-          reminderDate.toISOString(),
-      },
-    );
+      reminderAt: reminderDate.toISOString(),
+    });
 
     return;
   }
@@ -477,14 +389,12 @@ export async function scheduleTaskReminder(
    * Make sure notification permission/channel
    * exists.
    */
-  const channelId =
-    await createNotificationChannel();
+  const channelId = await createNotificationChannel();
 
   /*
    * Check exact alarm permission.
    */
-  const exactAlarmAllowed =
-    await hasExactAlarmPermission();
+  const exactAlarmAllowed = await hasExactAlarmPermission();
 
   if (!exactAlarmAllowed) {
     console.warn(
@@ -501,11 +411,9 @@ export async function scheduleTaskReminder(
    * Create timestamp trigger.
    */
   const trigger: TimestampTrigger = {
-    type:
-      TriggerType.TIMESTAMP,
+    type: TriggerType.TIMESTAMP,
 
-    timestamp:
-      reminderDate.getTime(),
+    timestamp: reminderDate.getTime(),
 
     alarmManager: {
       allowWhileIdle: true,
@@ -517,16 +425,13 @@ export async function scheduleTaskReminder(
    */
   await notifee.createTriggerNotification(
     {
-      id:
-        notificationId,
+      id: notificationId,
 
-      title:
-        task.title,
+      title: task.title,
 
-      body:
-        task.description?.trim()
-          ? task.description
-          : 'You have a task due now.',
+      body: task.description?.trim()
+        ? task.description
+        : 'You have a task due now.',
 
       android: {
         channelId,
@@ -536,15 +441,13 @@ export async function scheduleTaskReminder(
          * handler when the user taps the notification.
          */
         pressAction: {
-          id:
-            'open-task',
+          id: 'open-task',
         },
 
         /*
          * Uses your existing launcher icon.
          */
-        smallIcon:
-          'ic_launcher',
+        smallIcon: 'ic_launcher',
       },
 
       /*
@@ -554,61 +457,43 @@ export async function scheduleTaskReminder(
        * task the notification belongs to.
        */
       data: {
-        taskId:
-          task.id,
+        taskId: task.id,
       },
     },
 
     trigger,
   );
 
-  console.log(
-    'NOTIFICATION: Reminder scheduled.',
-    {
-      taskId:
-        task.id,
+  console.log('NOTIFICATION: Reminder scheduled.', {
+    taskId: task.id,
 
-      notificationId,
+    notificationId,
 
-      reminderAt:
-        reminderDate.toISOString(),
-    },
-  );
+    reminderAt: reminderDate.toISOString(),
+  });
 }
 
 /* ================================================= */
 /* CANCEL TASK REMINDER                               */
 /* ================================================= */
 
-export async function cancelTaskReminder(
-  taskId: string,
-): Promise<void> {
-  const notificationId =
-    getTaskNotificationId(
-      taskId,
-    );
+export async function cancelTaskReminder(taskId: string): Promise<void> {
+  const notificationId = getTaskNotificationId(taskId);
 
-  await notifee.cancelNotification(
+  await notifee.cancelNotification(notificationId);
+
+  console.log('NOTIFICATION: Reminder cancelled.', {
+    taskId,
+
     notificationId,
-  );
-
-  console.log(
-    'NOTIFICATION: Reminder cancelled.',
-    {
-      taskId,
-
-      notificationId,
-    },
-  );
+  });
 }
 
 /* ================================================= */
 /* GET SCHEDULED REMINDERS                            */
 /* ================================================= */
 
-export async function getScheduledTaskReminders(): Promise<
-  string[]
-> {
+export async function getScheduledTaskReminders(): Promise<string[]> {
   return await notifee.getTriggerNotificationIds();
 }
 

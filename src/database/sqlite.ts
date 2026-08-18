@@ -1,4 +1,4 @@
-import {open} from '@op-engineering/op-sqlite';
+import { open } from '@op-engineering/op-sqlite';
 
 import migrateV1 from './migrations/v1';
 
@@ -20,14 +20,10 @@ let initializationPromise: Promise<void> | null = null;
 
 async function runDatabaseInitialization(): Promise<void> {
   // Enable foreign-key enforcement.
-  await db.execute(
-    'PRAGMA foreign_keys = ON;',
-  );
+  await db.execute('PRAGMA foreign_keys = ON;');
 
   // WAL provides better concurrency and durability.
-  await db.execute(
-    'PRAGMA journal_mode = WAL;',
-  );
+  await db.execute('PRAGMA journal_mode = WAL;');
 
   /**
    * Migration tracking table.
@@ -51,9 +47,7 @@ async function runDatabaseInitialization(): Promise<void> {
   `);
 
   const currentVersion =
-    result.rows.length > 0
-      ? Number(result.rows[0].version)
-      : 0;
+    result.rows.length > 0 ? Number(result.rows[0].version) : 0;
 
   /**
    * Migration V1.
@@ -69,10 +63,7 @@ async function runDatabaseInitialization(): Promise<void> {
         )
         VALUES (?, ?);
       `,
-      [
-        1,
-        new Date().toISOString(),
-      ],
+      [1, new Date().toISOString()],
     );
   }
 }
@@ -85,8 +76,7 @@ async function runDatabaseInitialization(): Promise<void> {
  */
 export async function initializeDatabase() {
   if (!initializationPromise) {
-    initializationPromise =
-      runDatabaseInitialization();
+    initializationPromise = runDatabaseInitialization();
   }
 
   try {

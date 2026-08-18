@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 
 import {
   ActivityIndicator,
@@ -12,54 +12,35 @@ import {
   View,
 } from 'react-native';
 
-import {SafeAreaView} from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import {
-  createUserWithEmailAndPassword,
-  updateProfile,
-} from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 
-import {firebaseAuth} from '../../../config/firebase';
+import { firebaseAuth } from '../../../config/firebase';
 
-export default function SignupScreen({
-  navigation,
-}: any) {
-  const [fullName, setFullName] =
-    useState('');
+export default function SignupScreen({ navigation }: any) {
+  const [fullName, setFullName] = useState('');
 
-  const [email, setEmail] =
-    useState('');
+  const [email, setEmail] = useState('');
 
-  const [password, setPassword] =
-    useState('');
+  const [password, setPassword] = useState('');
 
-  const [confirmPassword, setConfirmPassword] =
-    useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
-  const [showPassword, setShowPassword] =
-    useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const [
-    showConfirmPassword,
-    setShowConfirmPassword,
-  ] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const [loading, setLoading] =
-    useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const [error, setError] =
-    useState('');
+  const [error, setError] = useState('');
 
   /* ================================================= */
   /* EMAIL VALIDATION                                  */
   /* ================================================= */
 
-  const validateEmail = (
-    value: string,
-  ) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-      value,
-    );
+  const validateEmail = (value: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
   };
 
   /* ================================================= */
@@ -71,10 +52,7 @@ export default function SignupScreen({
     uppercase: /[A-Z]/.test(password),
     lowercase: /[a-z]/.test(password),
     number: /[0-9]/.test(password),
-    special:
-      /[!@#$%^&*(),.?":{}|<>_\-+=/\\[\]]/.test(
-        password,
-      ),
+    special: /[!@#$%^&*(),.?":{}|<>_\-+=/\\[\]]/.test(password),
   };
 
   const passwordIsValid =
@@ -91,73 +69,55 @@ export default function SignupScreen({
   const handleSignup = async () => {
     setError('');
 
-    const cleanName =
-      fullName.trim();
+    const cleanName = fullName.trim();
 
-    const cleanEmail =
-      email.trim().toLowerCase();
+    const cleanEmail = email.trim().toLowerCase();
 
     /* Full name */
 
     if (!cleanName) {
-      setError(
-        'Please enter your full name.',
-      );
+      setError('Please enter your full name.');
       return;
     }
 
     if (cleanName.length < 2) {
-      setError(
-        'Please enter a valid full name.',
-      );
+      setError('Please enter a valid full name.');
       return;
     }
 
     /* Email */
 
     if (!cleanEmail) {
-      setError(
-        'Please enter your email address.',
-      );
+      setError('Please enter your email address.');
       return;
     }
 
     if (!validateEmail(cleanEmail)) {
-      setError(
-        'Please enter a valid email address.',
-      );
+      setError('Please enter a valid email address.');
       return;
     }
 
     /* Password */
 
     if (!password) {
-      setError(
-        'Please create a password.',
-      );
+      setError('Please create a password.');
       return;
     }
 
     if (!passwordIsValid) {
-      setError(
-        'Please meet all password requirements.',
-      );
+      setError('Please meet all password requirements.');
       return;
     }
 
     /* Confirm password */
 
     if (!confirmPassword) {
-      setError(
-        'Please confirm your password.',
-      );
+      setError('Please confirm your password.');
       return;
     }
 
     if (password !== confirmPassword) {
-      setError(
-        'Passwords do not match.',
-      );
+      setError('Passwords do not match.');
       return;
     }
 
@@ -167,23 +127,19 @@ export default function SignupScreen({
       /*
        * Create Firebase account.
        */
-      const result =
-        await createUserWithEmailAndPassword(
-          firebaseAuth,
-          cleanEmail,
-          password,
-        );
+      const result = await createUserWithEmailAndPassword(
+        firebaseAuth,
+        cleanEmail,
+        password,
+      );
 
       /*
        * Store the user's real name
        * in Firebase Authentication.
        */
-      await updateProfile(
-        result.user,
-        {
-          displayName: cleanName,
-        },
-      );
+      await updateProfile(result.user, {
+        displayName: cleanName,
+      });
 
       /*
        * Firebase automatically keeps the
@@ -194,46 +150,31 @@ export default function SignupScreen({
        * the authenticated application.
        */
     } catch (error: any) {
-      console.log(
-        'SIGNUP ERROR:',
-        error,
-      );
+      console.log('SIGNUP ERROR:', error);
 
       switch (error?.code) {
         case 'auth/email-already-in-use':
-          setError(
-            'An account already exists with this email.',
-          );
+          setError('An account already exists with this email.');
           break;
 
         case 'auth/invalid-email':
-          setError(
-            'Please enter a valid email address.',
-          );
+          setError('Please enter a valid email address.');
           break;
 
         case 'auth/weak-password':
-          setError(
-            'Firebase rejected this password as too weak.',
-          );
+          setError('Firebase rejected this password as too weak.');
           break;
 
         case 'auth/network-request-failed':
-          setError(
-            'Network error. Please check your internet connection.',
-          );
+          setError('Network error. Please check your internet connection.');
           break;
 
         case 'auth/operation-not-allowed':
-          setError(
-            'Email/password authentication is not enabled.',
-          );
+          setError('Email/password authentication is not enabled.');
           break;
 
         default:
-          setError(
-            'Unable to create your account. Please try again.',
-          );
+          setError('Unable to create your account. Please try again.');
       }
     } finally {
       setLoading(false);
@@ -252,28 +193,13 @@ export default function SignupScreen({
     children: React.ReactNode;
   }) => (
     <View style={styles.ruleRow}>
-      <View
-        style={[
-          styles.ruleIcon,
-          valid &&
-            styles.ruleIconValid,
-        ]}>
-        <Text
-          style={[
-            styles.ruleIconText,
-            valid &&
-              styles.ruleIconTextValid,
-          ]}>
+      <View style={[styles.ruleIcon, valid && styles.ruleIconValid]}>
+        <Text style={[styles.ruleIconText, valid && styles.ruleIconTextValid]}>
           {valid ? '✓' : ''}
         </Text>
       </View>
 
-      <Text
-        style={[
-          styles.ruleText,
-          valid &&
-            styles.ruleTextValid,
-        ]}>
+      <Text style={[styles.ruleText, valid && styles.ruleTextValid]}>
         {children}
       </Text>
     </View>
@@ -284,118 +210,54 @@ export default function SignupScreen({
   /* ================================================= */
 
   return (
-    <SafeAreaView
-      style={styles.safeArea}
-      edges={['top', 'bottom']}>
-
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
-        style={
-          styles.keyboardContainer
-        }
-        behavior={
-          Platform.OS === 'ios'
-            ? 'padding'
-            : 'height'
-        }
-        keyboardVerticalOffset={
-          Platform.OS === 'ios'
-            ? 0
-            : 20
-        }>
-
+        style={styles.keyboardContainer}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
         <ScrollView
           style={styles.scroll}
-          contentContainerStyle={
-            styles.scrollContent
-          }
+          contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode={
-            Platform.OS === 'ios'
-              ? 'interactive'
-              : 'on-drag'
+            Platform.OS === 'ios' ? 'interactive' : 'on-drag'
           }
           automaticallyAdjustKeyboardInsets
-          showsVerticalScrollIndicator={
-            false
-          }>
-
+          showsVerticalScrollIndicator={false}
+        >
           {/* ================================================= */}
           {/* HERO                                               */}
           {/* ================================================= */}
 
           <View style={styles.hero}>
+            <View style={styles.heroCircleOne} />
 
-            <View
-              style={
-                styles.heroCircleOne
-              }
-            />
-
-            <View
-              style={
-                styles.heroCircleTwo
-              }
-            />
+            <View style={styles.heroCircleTwo} />
 
             <Pressable
-              onPress={() =>
-                navigation.goBack()
-              }
+              onPress={() => navigation.goBack()}
               disabled={loading}
-              style={
-                styles.backButton
-              }>
+              style={styles.backButton}
+            >
+              <Text style={styles.backArrow}>‹</Text>
 
-              <Text
-                style={
-                  styles.backArrow
-                }>
-                ‹
-              </Text>
-
-              <Text
-                style={
-                  styles.backText
-                }>
-                Back
-              </Text>
-
+              <Text style={styles.backText}>Back</Text>
             </Pressable>
 
-            <View
-              style={styles.brandRow}>
-
-              <View
-                style={styles.logoBox}>
-                <Text
-                  style={
-                    styles.logoCheck
-                  }>
-                  ✓
-                </Text>
+            <View style={styles.brandRow}>
+              <View style={styles.logoBox}>
+                <Text style={styles.logoCheck}>✓</Text>
               </View>
 
-              <Text
-                style={styles.brand}>
-                TaskFlow
-              </Text>
-
+              <Text style={styles.brand}>TaskFlow</Text>
             </View>
 
-            <Text
-              style={styles.heroTitle}>
-              Create your account
-            </Text>
+            <Text style={styles.heroTitle}>Create your account</Text>
 
-            <Text
-              style={
-                styles.heroSubtitle
-              }>
-              Organize your work, manage
-              your tasks, and stay
-              productive.
+            <Text style={styles.heroSubtitle}>
+              Organize your work, manage your tasks, and stay productive.
             </Text>
-
           </View>
 
           {/* ================================================= */}
@@ -403,24 +265,12 @@ export default function SignupScreen({
           {/* ================================================= */}
 
           <View style={styles.card}>
-
             {/* FULL NAME */}
 
-            <Text style={styles.label}>
-              Full name
-            </Text>
+            <Text style={styles.label}>Full name</Text>
 
-            <View
-              style={
-                styles.inputContainer
-              }>
-
-              <Text
-                style={
-                  styles.inputIcon
-                }>
-                ◉
-              </Text>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputIcon}>◉</Text>
 
               <TextInput
                 style={styles.input}
@@ -440,26 +290,14 @@ export default function SignupScreen({
                 editable={!loading}
                 returnKeyType="next"
               />
-
             </View>
 
             {/* EMAIL */}
 
-            <Text style={styles.label}>
-              Email address
-            </Text>
+            <Text style={styles.label}>Email address</Text>
 
-            <View
-              style={
-                styles.inputContainer
-              }>
-
-              <Text
-                style={
-                  styles.inputIcon
-                }>
-                @
-              </Text>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputIcon}>@</Text>
 
               <TextInput
                 style={styles.input}
@@ -480,38 +318,18 @@ export default function SignupScreen({
                 editable={!loading}
                 returnKeyType="next"
               />
-
             </View>
 
             {/* PASSWORD */}
 
-            <View
-              style={styles.labelRow}>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>Password</Text>
 
-              <Text style={styles.label}>
-                Password
-              </Text>
-
-              <Text
-                style={
-                  styles.required
-                }>
-                Required
-              </Text>
-
+              <Text style={styles.required}>Required</Text>
             </View>
 
-            <View
-              style={
-                styles.inputContainer
-              }>
-
-              <Text
-                style={
-                  styles.inputIcon
-                }>
-                •
-              </Text>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputIcon}>•</Text>
 
               <TextInput
                 style={styles.input}
@@ -525,9 +343,7 @@ export default function SignupScreen({
                 }}
                 placeholder="Create a strong password"
                 placeholderTextColor="#9CA3AF"
-                secureTextEntry={
-                  !showPassword
-                }
+                secureTextEntry={!showPassword}
                 autoCapitalize="none"
                 autoCorrect={false}
                 autoComplete="new-password"
@@ -536,104 +352,50 @@ export default function SignupScreen({
               />
 
               <Pressable
-                onPress={() =>
-                  setShowPassword(
-                    value => !value,
-                  )
-                }
-                style={
-                  styles.showButton
-                }
-                disabled={loading}>
-
-                <Text
-                  style={
-                    styles.showText
-                  }>
-                  {showPassword
-                    ? 'Hide'
-                    : 'Show'}
+                onPress={() => setShowPassword(value => !value)}
+                style={styles.showButton}
+                disabled={loading}
+              >
+                <Text style={styles.showText}>
+                  {showPassword ? 'Hide' : 'Show'}
                 </Text>
-
               </Pressable>
-
             </View>
 
             {/* PASSWORD REQUIREMENTS */}
 
-            <View
-              style={
-                styles.passwordRequirements
-              }>
-
-              <Text
-                style={
-                  styles.requirementsTitle
-                }>
+            <View style={styles.passwordRequirements}>
+              <Text style={styles.requirementsTitle}>
                 Password requirements
               </Text>
 
-              <View
-                style={
-                  styles.rulesGrid
-                }>
-
-                <PasswordRule
-                  valid={
-                    passwordRules.length
-                  }>
+              <View style={styles.rulesGrid}>
+                <PasswordRule valid={passwordRules.length}>
                   8+ characters
                 </PasswordRule>
 
-                <PasswordRule
-                  valid={
-                    passwordRules.uppercase
-                  }>
+                <PasswordRule valid={passwordRules.uppercase}>
                   Uppercase letter
                 </PasswordRule>
 
-                <PasswordRule
-                  valid={
-                    passwordRules.lowercase
-                  }>
+                <PasswordRule valid={passwordRules.lowercase}>
                   Lowercase letter
                 </PasswordRule>
 
-                <PasswordRule
-                  valid={
-                    passwordRules.number
-                  }>
-                  Number
-                </PasswordRule>
+                <PasswordRule valid={passwordRules.number}>Number</PasswordRule>
 
-                <PasswordRule
-                  valid={
-                    passwordRules.special
-                  }>
+                <PasswordRule valid={passwordRules.special}>
                   Special character
                 </PasswordRule>
-
               </View>
-
             </View>
 
             {/* CONFIRM PASSWORD */}
 
-            <Text style={styles.label}>
-              Confirm password
-            </Text>
+            <Text style={styles.label}>Confirm password</Text>
 
-            <View
-              style={
-                styles.inputContainer
-              }>
-
-              <Text
-                style={
-                  styles.inputIcon
-                }>
-                •
-              </Text>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputIcon}>•</Text>
 
               <TextInput
                 style={styles.input}
@@ -647,90 +409,51 @@ export default function SignupScreen({
                 }}
                 placeholder="Re-enter your password"
                 placeholderTextColor="#9CA3AF"
-                secureTextEntry={
-                  !showConfirmPassword
-                }
+                secureTextEntry={!showConfirmPassword}
                 autoCapitalize="none"
                 autoCorrect={false}
                 autoComplete="new-password"
                 editable={!loading}
                 returnKeyType="done"
-                onSubmitEditing={
-                  handleSignup
-                }
+                onSubmitEditing={handleSignup}
               />
 
               <Pressable
-                onPress={() =>
-                  setShowConfirmPassword(
-                    value => !value,
-                  )
-                }
-                style={
-                  styles.showButton
-                }
-                disabled={loading}>
-
-                <Text
-                  style={
-                    styles.showText
-                  }>
-                  {showConfirmPassword
-                    ? 'Hide'
-                    : 'Show'}
+                onPress={() => setShowConfirmPassword(value => !value)}
+                style={styles.showButton}
+                disabled={loading}
+              >
+                <Text style={styles.showText}>
+                  {showConfirmPassword ? 'Hide' : 'Show'}
                 </Text>
-
               </Pressable>
-
             </View>
 
             {/* PASSWORD MATCH */}
 
-            {confirmPassword.length >
-            0 ? (
+            {confirmPassword.length > 0 ? (
               <Text
                 style={
-                  password ===
-                  confirmPassword
+                  password === confirmPassword
                     ? styles.matchSuccess
                     : styles.matchError
-                }>
-
-                {password ===
-                confirmPassword
+                }
+              >
+                {password === confirmPassword
                   ? '✓ Passwords match'
                   : 'Passwords do not match'}
-
               </Text>
             ) : null}
 
             {/* ERROR */}
 
             {error ? (
-              <View
-                style={
-                  styles.errorContainer
-                }>
-
-                <View
-                  style={
-                    styles.errorIcon
-                  }>
-                  <Text
-                    style={
-                      styles.errorIconText
-                    }>
-                    !
-                  </Text>
+              <View style={styles.errorContainer}>
+                <View style={styles.errorIcon}>
+                  <Text style={styles.errorIconText}>!</Text>
                 </View>
 
-                <Text
-                  style={
-                    styles.errorText
-                  }>
-                  {error}
-                </Text>
-
+                <Text style={styles.errorText}>{error}</Text>
               </View>
             ) : null}
 
@@ -739,36 +462,21 @@ export default function SignupScreen({
             <Pressable
               onPress={handleSignup}
               disabled={loading}
-              style={({pressed}) => [
+              style={({ pressed }) => [
                 styles.signupButton,
-                pressed &&
-                  styles.buttonPressed,
-                loading &&
-                  styles.buttonDisabled,
-              ]}>
-
+                pressed && styles.buttonPressed,
+                loading && styles.buttonDisabled,
+              ]}
+            >
               {loading ? (
-                <ActivityIndicator
-                  color="#FFFFFF"
-                />
+                <ActivityIndicator color="#FFFFFF" />
               ) : (
                 <>
-                  <Text
-                    style={
-                      styles.signupButtonText
-                    }>
-                    Create account
-                  </Text>
+                  <Text style={styles.signupButtonText}>Create account</Text>
 
-                  <Text
-                    style={
-                      styles.signupArrow
-                    }>
-                    →
-                  </Text>
+                  <Text style={styles.signupArrow}>→</Text>
                 </>
               )}
-
             </Pressable>
 
             {/* GOOGLE - COMMENTED */}
@@ -793,51 +501,26 @@ export default function SignupScreen({
 
             {/* LOGIN */}
 
-            <View
-              style={
-                styles.loginRow
-              }>
-
-              <Text
-                style={
-                  styles.loginText
-                }>
-                Already have an account?
-              </Text>
+            <View style={styles.loginRow}>
+              <Text style={styles.loginText}>Already have an account?</Text>
 
               <Pressable
-                onPress={() =>
-                  navigation.navigate(
-                    'Login',
-                  )
-                }
-                disabled={loading}>
-
-                <Text
-                  style={
-                    styles.loginLink
-                  }>
-                  Sign in
-                </Text>
-
+                onPress={() => navigation.navigate('Login')}
+                disabled={loading}
+              >
+                <Text style={styles.loginLink}>Sign in</Text>
               </Pressable>
-
             </View>
-
           </View>
 
           {/* FOOTER */}
 
           <Text style={styles.footer}>
-            By creating an account, you
-            agree to our Terms of Service
-            and Privacy Policy.
+            By creating an account, you agree to our Terms of Service and
+            Privacy Policy.
           </Text>
-
         </ScrollView>
-
       </KeyboardAvoidingView>
-
     </SafeAreaView>
   );
 }
@@ -881,8 +564,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 110,
-    backgroundColor:
-      'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
     right: -90,
     top: -80,
   },
@@ -892,8 +574,7 @@ const styles = StyleSheet.create({
     width: 140,
     height: 140,
     borderRadius: 70,
-    backgroundColor:
-      'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
     left: -70,
     bottom: -70,
   },
@@ -915,8 +596,7 @@ const styles = StyleSheet.create({
   },
 
   backText: {
-    color:
-      'rgba(255,255,255,0.9)',
+    color: 'rgba(255,255,255,0.9)',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -960,8 +640,7 @@ const styles = StyleSheet.create({
   },
 
   heroSubtitle: {
-    color:
-      'rgba(255,255,255,0.84)',
+    color: 'rgba(255,255,255,0.84)',
     fontSize: 15,
     lineHeight: 22,
     maxWidth: 330,
@@ -993,8 +672,7 @@ const styles = StyleSheet.create({
   labelRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent:
-      'space-between',
+    justifyContent: 'space-between',
   },
 
   label: {

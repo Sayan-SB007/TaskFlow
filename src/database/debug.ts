@@ -1,4 +1,4 @@
-import {db, initializeDatabase} from './sqlite';
+import { db, initializeDatabase } from './sqlite';
 
 export async function debugTasks() {
   await initializeDatabase();

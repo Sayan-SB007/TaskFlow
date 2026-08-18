@@ -1,14 +1,8 @@
-import type {Task} from '../../features/tasks/types';
+import type { Task } from '../../features/tasks/types';
 
-import {
-  db,
-  initializeDatabase,
-} from '../sqlite';
+import { db, initializeDatabase } from '../sqlite';
 
-import {
-  firebaseAuth,
-} from '../../config/firebase';
-
+import { firebaseAuth } from '../../config/firebase';
 
 /* ================================================= */
 /* TYPES                                             */
@@ -40,44 +34,33 @@ type TaskRow = {
   deleted_at: string | null;
 };
 
-
 /* ================================================= */
 /* FIREBASE USER                                     */
 /* ================================================= */
 
 function getCurrentUserId(): string | null {
-  return (
-    firebaseAuth.currentUser?.uid ??
-    null
-  );
+  return firebaseAuth.currentUser?.uid ?? null;
 }
-
 
 /* ================================================= */
 /* MAP SQLITE → TASK                                 */
 /* ================================================= */
 
-function mapRowToTask(
-  row: TaskRow,
-): Task {
+function mapRowToTask(row: TaskRow): Task {
   return {
     id: row.id,
 
     title: row.title,
 
-    description:
-      row.description ?? '',
+    description: row.description ?? '',
 
     dueDate: row.due_date,
 
-    dueTime:
-      row.due_time ?? '',
+    dueTime: row.due_time ?? '',
 
-    priority:
-      row.priority as Task['priority'],
+    priority: row.priority as Task['priority'],
 
-    status:
-      row.status as Task['status'],
+    status: row.status as Task['status'],
 
     /*
      * IMPORTANT:
@@ -88,18 +71,13 @@ function mapRowToTask(
      * Without this, syncService cannot
      * know that a task was deleted locally.
      */
-    deletedAt:
-      row.deleted_at ??
-      undefined,
+    deletedAt: row.deleted_at ?? undefined,
 
-    createdAt:
-      row.created_at,
+    createdAt: row.created_at,
 
-    updatedAt:
-      row.updated_at,
+    updatedAt: row.updated_at,
   };
 }
-
 
 /* ================================================= */
 /* GET TASKS                                         */
@@ -108,8 +86,7 @@ function mapRowToTask(
 async function getTasks(): Promise<Task[]> {
   await initializeDatabase();
 
-  const result =
-    await db.execute(`
+  const result = await db.execute(`
       SELECT
         id,
         title,
@@ -135,27 +112,18 @@ async function getTasks(): Promise<Task[]> {
         due_time ASC;
     `);
 
-  return result.rows.map(
-    row =>
-      mapRowToTask(
-        row as TaskRow,
-      ),
-  );
+  return result.rows.map(row => mapRowToTask(row as TaskRow));
 }
-
 
 /* ================================================= */
 /* GET SINGLE TASK                                   */
 /* ================================================= */
 
-async function getTaskById(
-  id: string,
-): Promise<Task | null> {
+async function getTaskById(id: string): Promise<Task | null> {
   await initializeDatabase();
 
-  const result =
-    await db.execute(
-      `
+  const result = await db.execute(
+    `
         SELECT
           id,
           title,
@@ -174,33 +142,26 @@ async function getTaskById(
           AND deleted_at IS NULL
         LIMIT 1;
       `,
-      [id],
-    );
+    [id],
+  );
 
   if (result.rows.length === 0) {
     return null;
   }
 
-  return mapRowToTask(
-    result.rows[0] as TaskRow,
-  );
+  return mapRowToTask(result.rows[0] as TaskRow);
 }
-
 
 /* ================================================= */
 /* CREATE                                           */
 /* ================================================= */
 
-async function createTask(
-  task: Task,
-): Promise<Task> {
+async function createTask(task: Task): Promise<Task> {
   await initializeDatabase();
 
-  const now =
-    new Date().toISOString();
+  const now = new Date().toISOString();
 
-  const userId =
-    getCurrentUserId();
+  const userId = getCurrentUserId();
 
   await db.execute(
     `
@@ -247,27 +208,19 @@ async function createTask(
     ],
   );
 
-  await addToSyncQueue(
-    task.id,
-    'create',
-    task,
-  );
+  await addToSyncQueue(task.id, 'create', task);
 
   return task;
 }
-
 
 /* ================================================= */
 /* UPDATE                                           */
 /* ================================================= */
 
-async function updateTask(
-  task: Task,
-): Promise<Task> {
+async function updateTask(task: Task): Promise<Task> {
   await initializeDatabase();
 
-  const now =
-    new Date().toISOString();
+  const now = new Date().toISOString();
 
   await db.execute(
     `
@@ -311,27 +264,19 @@ async function updateTask(
     deletedAt: undefined,
   };
 
-  await addToSyncQueue(
-    task.id,
-    'update',
-    updatedTask,
-  );
+  await addToSyncQueue(task.id, 'update', updatedTask);
 
   return updatedTask;
 }
-
 
 /* ================================================= */
 /* DELETE                                           */
 /* ================================================= */
 
-async function deleteTask(
-  id: string,
-): Promise<void> {
+async function deleteTask(id: string): Promise<void> {
   await initializeDatabase();
 
-  const now =
-    new Date().toISOString();
+  const now = new Date().toISOString();
 
   /*
    * Keep the row locally.
@@ -348,34 +293,21 @@ async function deleteTask(
         updated_at = ?
       WHERE id = ?;
     `,
-    [
-      now,
-
-      now,
-
-      id,
-    ],
+    [now, now, id],
   );
 
-  await addToSyncQueue(
+  await addToSyncQueue(id, 'delete', {
     id,
-    'delete',
-    {
-      id,
 
-      deletedAt: now,
-    },
-  );
+    deletedAt: now,
+  });
 }
-
 
 /* ================================================= */
 /* MARK SYNCED                                       */
 /* ================================================= */
 
-async function markSynced(
-  id: string,
-): Promise<void> {
+async function markSynced(id: string): Promise<void> {
   await initializeDatabase();
 
   await db.execute(
@@ -389,14 +321,11 @@ async function markSynced(
   );
 }
 
-
 /* ================================================= */
 /* REMOVE LOCAL DELETED TASK                        */
 /* ================================================= */
 
-async function removeDeletedTask(
-  id: string,
-): Promise<void> {
+async function removeDeletedTask(id: string): Promise<void> {
   await initializeDatabase();
 
   await db.execute(
@@ -409,18 +338,14 @@ async function removeDeletedTask(
   );
 }
 
-
 /* ================================================= */
 /* PENDING TASKS                                     */
 /* ================================================= */
 
-async function getPendingTasks(): Promise<
-  Task[]
-> {
+async function getPendingTasks(): Promise<Task[]> {
   await initializeDatabase();
 
-  const result =
-    await db.execute(`
+  const result = await db.execute(`
       SELECT
         id,
         title,
@@ -438,33 +363,23 @@ async function getPendingTasks(): Promise<
       WHERE sync_state != 0;
     `);
 
-  return result.rows.map(
-    row =>
-      mapRowToTask(
-        row as TaskRow,
-      ),
-  );
+  return result.rows.map(row => mapRowToTask(row as TaskRow));
 }
-
 
 /* ================================================= */
 /* UPSERT REMOTE TASK                                */
 /* ================================================= */
 
-async function upsertRemoteTask(
-  task: Task,
-): Promise<void> {
+async function upsertRemoteTask(task: Task): Promise<void> {
   await initializeDatabase();
 
-  const userId =
-    getCurrentUserId();
+  const userId = getCurrentUserId();
 
   /*
    * Check whether a local task exists.
    */
-  const existingResult =
-    await db.execute(
-      `
+  const existingResult = await db.execute(
+    `
         SELECT
           id,
           title,
@@ -482,23 +397,18 @@ async function upsertRemoteTask(
         WHERE id = ?
         LIMIT 1;
       `,
-      [task.id],
-    );
+    [task.id],
+  );
 
-  if (
-    existingResult.rows.length > 0
-  ) {
-    const existing =
-      existingResult.rows[0] as TaskRow;
+  if (existingResult.rows.length > 0) {
+    const existing = existingResult.rows[0] as TaskRow;
 
     /*
      * Never overwrite a local pending change.
      *
      * The local version must sync first.
      */
-    if (
-      existing.sync_state !== 0
-    ) {
+    if (existing.sync_state !== 0) {
       return;
     }
 
@@ -506,12 +416,8 @@ async function upsertRemoteTask(
      * Local version is newer.
      */
     if (
-      new Date(
-        existing.updated_at,
-      ).getTime() >
-      new Date(
-        task.updatedAt,
-      ).getTime()
+      new Date(existing.updated_at).getTime() >
+      new Date(task.updatedAt).getTime()
     ) {
       return;
     }
@@ -604,7 +510,6 @@ async function upsertRemoteTask(
   );
 }
 
-
 /* ================================================= */
 /* SYNC QUEUE                                        */
 /* ================================================= */
@@ -612,10 +517,7 @@ async function upsertRemoteTask(
 async function addToSyncQueue(
   entityId: string,
 
-  operation:
-    | 'create'
-    | 'update'
-    | 'delete',
+  operation: 'create' | 'update' | 'delete',
 
   payload: unknown,
 ): Promise<void> {
@@ -643,7 +545,6 @@ async function addToSyncQueue(
     ],
   );
 }
-
 
 /* ================================================= */
 /* EXPORT                                            */

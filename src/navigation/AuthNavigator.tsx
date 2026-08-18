@@ -1,47 +1,28 @@
-import React, {
-  Suspense,
-  lazy,
-} from 'react';
+import React, { Suspense, lazy } from 'react';
 
-import {
-  ActivityIndicator,
-  StyleSheet,
-  View,
-  Text,
-} from 'react-native';
+import { ActivityIndicator, StyleSheet, View, Text } from 'react-native';
 
-import {
-  createNativeStackNavigator,
-} from '@react-navigation/native-stack';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-import type {
-  AuthStackParamList,
-} from './types';
+import type { AuthStackParamList } from './types';
 
 /* ================================================= */
 /* LAZY LOADED AUTH SCREENS                          */
 /* ================================================= */
 
 const LazyLoginScreen = lazy(
-  () =>
-    import(
-      '../features/auth/screens/LoginScreen'
-    ),
+  () => import('../features/auth/screens/LoginScreen'),
 );
 
 const LazySignupScreen = lazy(
-  () =>
-    import(
-      '../features/auth/screens/SignupScreen'
-    ),
+  () => import('../features/auth/screens/SignupScreen'),
 );
 
 /* ================================================= */
 /* NAVIGATOR                                         */
 /* ================================================= */
 
-const Stack =
-  createNativeStackNavigator<AuthStackParamList>();
+const Stack = createNativeStackNavigator<AuthStackParamList>();
 
 /* ================================================= */
 /* LOADING                                           */
@@ -50,14 +31,9 @@ const Stack =
 function ScreenLoader() {
   return (
     <View style={styles.loadingContainer}>
-      <ActivityIndicator
-        size="large"
-        color="#1769E0"
-      />
+      <ActivityIndicator size="large" color="#1769E0" />
 
-      <Text style={styles.loadingText}>
-        Loading...
-      </Text>
+      <Text style={styles.loadingText}>Loading...</Text>
     </View>
   );
 }

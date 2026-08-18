@@ -1,63 +1,37 @@
-import {
-  createAsyncThunk,
-  createSlice,
-  PayloadAction,
-} from '@reduxjs/toolkit';
+import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 
-import type {
-  Task,
-  TaskFilter,
-  TaskPriority,
-} from './types';
+import type { Task, TaskFilter, TaskPriority } from './types';
 
-import {
-  taskService,
-} from './taskService';
+import { taskService } from './taskService';
 
-import {
-  syncTasks,
-} from '../sync/syncService';
+import { syncTasks } from '../sync/syncService';
 
 import {
   scheduleTaskReminder,
   cancelTaskReminder,
 } from '../notifications/notificationService';
 
-
 /* ================================================= */
 /* STATE                                             */
 /* ================================================= */
 
 interface TaskState {
-
   items: Task[];
 
   filter: TaskFilter;
 
-  status:
-    | 'idle'
-    | 'loading'
-    | 'success'
-    | 'error';
+  status: 'idle' | 'loading' | 'success' | 'error';
 
-  operation:
-    | 'load'
-    | 'create'
-    | 'update'
-    | 'toggle'
-    | 'delete'
-    | null;
+  operation: 'load' | 'create' | 'update' | 'toggle' | 'delete' | null;
 
   error: string | null;
 }
-
 
 /* ================================================= */
 /* PAYLOAD                                           */
 /* ================================================= */
 
 interface TaskPayload {
-
   title: string;
 
   description?: string;
@@ -69,34 +43,21 @@ interface TaskPayload {
   dueTime?: string;
 }
 
-
 /* ================================================= */
 /* LOAD TASKS                                        */
 /* ================================================= */
 
-export const loadTasks =
-  createAsyncThunk(
+export const loadTasks = createAsyncThunk(
+  'tasks/loadTasks',
 
-    'tasks/loadTasks',
-
-    async (
-      _,
-      {rejectWithValue},
-    ) => {
-
-      try {
-
-        return await taskService.getTasks();
-
-      } catch (error) {
-
-        return rejectWithValue(
-          getErrorMessage(error),
-        );
-      }
-    },
-  );
-
+  async (_, { rejectWithValue }) => {
+    try {
+      return await taskService.getTasks();
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
 
 /* ================================================= */
 /* REFRESH TASKS                                     */
@@ -120,900 +81,573 @@ export const loadTasks =
  *    ↓
  * UI
  */
-export const refreshTasks =
-  createAsyncThunk(
+export const refreshTasks = createAsyncThunk(
+  'tasks/refreshTasks',
 
-    'tasks/refreshTasks',
-
-    async (
-      _,
-      {rejectWithValue},
-    ) => {
-
-      try {
-
-        return await taskService.getTasks();
-
-      } catch (error) {
-
-        return rejectWithValue(
-          getErrorMessage(error),
-        );
-      }
-    },
-  );
-
+  async (_, { rejectWithValue }) => {
+    try {
+      return await taskService.getTasks();
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
 
 /* ================================================= */
 /* ADD TASK                                          */
 /* ================================================= */
 
-export const addTask =
-  createAsyncThunk(
+export const addTask = createAsyncThunk(
+  'tasks/addTask',
 
-    'tasks/addTask',
+  async (
+    payload: TaskPayload,
 
-    async (
+    { rejectWithValue },
+  ) => {
+    try {
+      const timestamp = new Date().toISOString();
 
-      payload: TaskPayload,
+      const task: Task = {
+        id: `task-${Date.now()}`,
 
-      {rejectWithValue},
+        title: payload.title.trim(),
 
-    ) => {
+        description: payload.description?.trim(),
 
-      try {
+        priority: payload.priority,
 
-        const timestamp =
-          new Date().toISOString();
+        status: 'pending',
 
+        dueDate: payload.dueDate,
 
-        const task: Task = {
+        dueTime: payload.dueTime,
 
-          id:
-            `task-${Date.now()}`,
+        createdAt: timestamp,
 
-          title:
-            payload.title.trim(),
+        updatedAt: timestamp,
+      };
 
-          description:
-            payload.description?.trim(),
+      /* ============================================= */
+      /* STEP 1 — SAVE TO SQLITE                       */
+      /* ============================================= */
 
-          priority:
-            payload.priority,
+      const createdTask = await taskService.createTask(task);
 
-          status:
-            'pending',
+      /* ============================================= */
+      /* STEP 2 — SCHEDULE NOTIFICATION                */
+      /* ============================================= */
 
-          dueDate:
-            payload.dueDate,
-
-          dueTime:
-            payload.dueTime,
-
-          createdAt:
-            timestamp,
-
-          updatedAt:
-            timestamp,
-        };
-
-
-        /* ============================================= */
-        /* STEP 1 — SAVE TO SQLITE                       */
-        /* ============================================= */
-
-        const createdTask =
-          await taskService.createTask(
-            task,
-          );
-
-
-        /* ============================================= */
-        /* STEP 2 — SCHEDULE NOTIFICATION                */
-        /* ============================================= */
-
-        void scheduleTaskReminder(
-          createdTask,
-        ).catch(error => {
-
-          console.warn(
-            'NOTIFICATION: Failed to schedule created task reminder',
-            error,
-          );
-        });
-
-
-        /* ============================================= */
-        /* STEP 3 — BACKGROUND SYNC                      */
-        /* ============================================= */
-
-        /*
-         * IMPORTANT:
-         *
-         * syncTasks() is now debounced.
-         *
-         * The task is already safely stored
-         * in SQLite before this runs.
-         *
-         * The UI does not wait for Firebase.
-         */
-        void syncTasks();
-
-
-        return createdTask;
-
-      } catch (error) {
-
-        return rejectWithValue(
-          getErrorMessage(error),
+      void scheduleTaskReminder(createdTask).catch(error => {
+        console.warn(
+          'NOTIFICATION: Failed to schedule created task reminder',
+          error,
         );
-      }
-    },
-  );
+      });
 
+      /* ============================================= */
+      /* STEP 3 — BACKGROUND SYNC                      */
+      /* ============================================= */
+
+      /*
+       * IMPORTANT:
+       *
+       * syncTasks() is now debounced.
+       *
+       * The task is already safely stored
+       * in SQLite before this runs.
+       *
+       * The UI does not wait for Firebase.
+       */
+      void syncTasks();
+
+      return createdTask;
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
 
 /* ================================================= */
 /* UPDATE TASK                                       */
 /* ================================================= */
 
-export const updateTask =
-  createAsyncThunk(
+export const updateTask = createAsyncThunk(
+  'tasks/updateTask',
 
-    'tasks/updateTask',
-
-    async (
-
-      payload: TaskPayload & {
-        id: string;
-      },
-
-      {rejectWithValue},
-
-    ) => {
-
-      try {
-
-        /* ============================================= */
-        /* GET EXISTING TASK                             */
-        /* ============================================= */
-
-        const existing =
-          await taskService.getTaskById(
-            payload.id,
-          );
-
-
-        if (!existing) {
-
-          throw new Error(
-            'Task could not be found.',
-          );
-        }
-
-
-        /* ============================================= */
-        /* BUILD UPDATED TASK                            */
-        /* ============================================= */
-
-        const task: Task = {
-
-          ...existing,
-
-          title:
-            payload.title.trim(),
-
-          description:
-            payload.description?.trim(),
-
-          priority:
-            payload.priority,
-
-          dueDate:
-            payload.dueDate,
-
-          dueTime:
-            payload.dueTime,
-
-          updatedAt:
-            new Date().toISOString(),
-        };
-
-
-        /* ============================================= */
-        /* STEP 1 — UPDATE SQLITE                       */
-        /* ============================================= */
-
-        const updatedTask =
-          await taskService.updateTask(
-            task,
-          );
-
-
-        /* ============================================= */
-        /* STEP 2 — UPDATE NOTIFICATION                 */
-        /* ============================================= */
-
-        void scheduleTaskReminder(
-          updatedTask,
-        ).catch(error => {
-
-          console.warn(
-            'NOTIFICATION: Failed to reschedule updated task',
-            error,
-          );
-        });
-
-
-        /* ============================================= */
-        /* STEP 3 — BACKGROUND SYNC                      */
-        /* ============================================= */
-
-        void syncTasks();
-
-
-        return updatedTask;
-
-      } catch (error) {
-
-        return rejectWithValue(
-          getErrorMessage(error),
-        );
-      }
+  async (
+    payload: TaskPayload & {
+      id: string;
     },
-  );
 
+    { rejectWithValue },
+  ) => {
+    try {
+      /* ============================================= */
+      /* GET EXISTING TASK                             */
+      /* ============================================= */
+
+      const existing = await taskService.getTaskById(payload.id);
+
+      if (!existing) {
+        throw new Error('Task could not be found.');
+      }
+
+      /* ============================================= */
+      /* BUILD UPDATED TASK                            */
+      /* ============================================= */
+
+      const task: Task = {
+        ...existing,
+
+        title: payload.title.trim(),
+
+        description: payload.description?.trim(),
+
+        priority: payload.priority,
+
+        dueDate: payload.dueDate,
+
+        dueTime: payload.dueTime,
+
+        updatedAt: new Date().toISOString(),
+      };
+
+      /* ============================================= */
+      /* STEP 1 — UPDATE SQLITE                       */
+      /* ============================================= */
+
+      const updatedTask = await taskService.updateTask(task);
+
+      /* ============================================= */
+      /* STEP 2 — UPDATE NOTIFICATION                 */
+      /* ============================================= */
+
+      void scheduleTaskReminder(updatedTask).catch(error => {
+        console.warn('NOTIFICATION: Failed to reschedule updated task', error);
+      });
+
+      /* ============================================= */
+      /* STEP 3 — BACKGROUND SYNC                      */
+      /* ============================================= */
+
+      void syncTasks();
+
+      return updatedTask;
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
 
 /* ================================================= */
 /* TOGGLE TASK                                       */
 /* ================================================= */
 
-export const toggleTask =
-  createAsyncThunk(
+export const toggleTask = createAsyncThunk(
+  'tasks/toggleTask',
 
-    'tasks/toggleTask',
+  async (
+    id: string,
 
-    async (
+    { rejectWithValue },
+  ) => {
+    try {
+      /* ============================================= */
+      /* GET EXISTING TASK                             */
+      /* ============================================= */
 
-      id: string,
+      const task = await taskService.getTaskById(id);
 
-      {rejectWithValue},
-
-    ) => {
-
-      try {
-
-        /* ============================================= */
-        /* GET EXISTING TASK                             */
-        /* ============================================= */
-
-        const task =
-          await taskService.getTaskById(
-            id,
-          );
-
-
-        if (!task) {
-
-          throw new Error(
-            'Task could not be found.',
-          );
-        }
-
-
-        /* ============================================= */
-        /* STEP 1 — UPDATE SQLITE                       */
-        /* ============================================= */
-
-        const updatedTask =
-          await taskService.toggleTask(
-            task,
-          );
-
-
-        /* ============================================= */
-        /* STEP 2 — UPDATE NOTIFICATION                 */
-        /* ============================================= */
-
-        void scheduleTaskReminder(
-          updatedTask,
-        ).catch(error => {
-
-          console.warn(
-            'NOTIFICATION: Failed to update task reminder',
-            error,
-          );
-        });
-
-
-        /* ============================================= */
-        /* STEP 3 — BACKGROUND SYNC                      */
-        /* ============================================= */
-
-        void syncTasks();
-
-
-        return updatedTask;
-
-      } catch (error) {
-
-        return rejectWithValue(
-          getErrorMessage(error),
-        );
+      if (!task) {
+        throw new Error('Task could not be found.');
       }
-    },
-  );
 
+      /* ============================================= */
+      /* STEP 1 — UPDATE SQLITE                       */
+      /* ============================================= */
+
+      const updatedTask = await taskService.toggleTask(task);
+
+      /* ============================================= */
+      /* STEP 2 — UPDATE NOTIFICATION                 */
+      /* ============================================= */
+
+      void scheduleTaskReminder(updatedTask).catch(error => {
+        console.warn('NOTIFICATION: Failed to update task reminder', error);
+      });
+
+      /* ============================================= */
+      /* STEP 3 — BACKGROUND SYNC                      */
+      /* ============================================= */
+
+      void syncTasks();
+
+      return updatedTask;
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
 
 /* ================================================= */
 /* DELETE TASK                                       */
 /* ================================================= */
 
-export const deleteTask =
-  createAsyncThunk(
+export const deleteTask = createAsyncThunk(
+  'tasks/deleteTask',
 
-    'tasks/deleteTask',
+  async (
+    id: string,
 
-    async (
+    { rejectWithValue },
+  ) => {
+    try {
+      /* ============================================= */
+      /* STEP 1 — DELETE FROM SQLITE                  */
+      /* ============================================= */
 
-      id: string,
+      await taskService.deleteTask(id);
 
-      {rejectWithValue},
+      /* ============================================= */
+      /* STEP 2 — CANCEL NOTIFICATION                 */
+      /* ============================================= */
 
-    ) => {
-
-      try {
-
-        /* ============================================= */
-        /* STEP 1 — DELETE FROM SQLITE                  */
-        /* ============================================= */
-
-        await taskService.deleteTask(
-          id,
+      void cancelTaskReminder(id).catch(error => {
+        console.warn(
+          'NOTIFICATION: Failed to cancel deleted task reminder',
+          error,
         );
+      });
 
+      /* ============================================= */
+      /* STEP 3 — BACKGROUND SYNC                      */
+      /* ============================================= */
 
-        /* ============================================= */
-        /* STEP 2 — CANCEL NOTIFICATION                 */
-        /* ============================================= */
+      void syncTasks();
 
-        void cancelTaskReminder(
-          id,
-        ).catch(error => {
-
-          console.warn(
-            'NOTIFICATION: Failed to cancel deleted task reminder',
-            error,
-          );
-        });
-
-
-        /* ============================================= */
-        /* STEP 3 — BACKGROUND SYNC                      */
-        /* ============================================= */
-
-        void syncTasks();
-
-
-        return id;
-
-      } catch (error) {
-
-        return rejectWithValue(
-          getErrorMessage(error),
-        );
-      }
-    },
-  );
-
+      return id;
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error));
+    }
+  },
+);
 
 /* ================================================= */
 /* INITIAL STATE                                     */
 /* ================================================= */
 
 const initialState: TaskState = {
-
   items: [],
 
-  filter:
-    'all',
+  filter: 'all',
 
-  status:
-    'idle',
+  status: 'idle',
 
-  operation:
-    null,
+  operation: null,
 
-  error:
-    null,
+  error: null,
 };
-
 
 /* ================================================= */
 /* SLICE                                             */
 /* ================================================= */
 
-const taskSlice =
-  createSlice({
+const taskSlice = createSlice({
+  name: 'tasks',
 
-    name:
-      'tasks',
+  initialState,
 
-    initialState,
+  reducers: {
+    /* ============================================= */
+    /* SET FILTER                                    */
+    /* ============================================= */
 
-    reducers: {
+    setFilter: (
+      state,
 
-      /* ============================================= */
-      /* SET FILTER                                    */
-      /* ============================================= */
-
-      setFilter: (
-
-        state,
-
-        action:
-          PayloadAction<TaskFilter>,
-
-      ) => {
-
-        state.filter =
-          action.payload;
-      },
-
-
-      /* ============================================= */
-      /* CLEAR ERROR                                   */
-      /* ============================================= */
-
-      clearTaskError:
-        state => {
-
-          state.error =
-            null;
-        },
+      action: PayloadAction<TaskFilter>,
+    ) => {
+      state.filter = action.payload;
     },
 
+    /* ============================================= */
+    /* CLEAR ERROR                                   */
+    /* ============================================= */
 
-    /* ================================================= */
-    /* EXTRA REDUCERS                                   */
-    /* ================================================= */
+    clearTaskError: state => {
+      state.error = null;
+    },
+  },
 
-    extraReducers:
-      builder => {
+  /* ================================================= */
+  /* EXTRA REDUCERS                                   */
+  /* ================================================= */
 
+  extraReducers: builder => {
+    /* ============================================= */
+    /* LOAD TASKS                                    */
+    /* ============================================= */
 
-        /* ============================================= */
-        /* LOAD TASKS                                    */
-        /* ============================================= */
+    builder.addCase(
+      loadTasks.pending,
 
-        builder.addCase(
+      state => {
+        state.status = 'loading';
 
-          loadTasks.pending,
+        state.operation = 'load';
 
-          state => {
-
-            state.status =
-              'loading';
-
-            state.operation =
-              'load';
-
-            state.error =
-              null;
-          },
-        );
-
-
-        builder.addCase(
-
-          loadTasks.fulfilled,
-
-          (
-            state,
-            action,
-          ) => {
-
-            state.items =
-              action.payload;
-
-            state.status =
-              'success';
-
-            state.operation =
-              null;
-
-            state.error =
-              null;
-          },
-        );
-
-
-        builder.addCase(
-
-          loadTasks.rejected,
-
-          (
-            state,
-            action,
-          ) => {
-
-            state.status =
-              'error';
-
-            state.operation =
-              null;
-
-            state.error =
-              action.payload as string;
-          },
-        );
-
-
-        /* ============================================= */
-        /* REFRESH TASKS                                 */
-        /* ============================================= */
-
-        builder.addCase(
-
-          refreshTasks.fulfilled,
-
-          (
-            state,
-            action,
-          ) => {
-
-            /*
-             * IMPORTANT:
-             *
-             * Do NOT set status to loading.
-             *
-             * The user should not see a loading
-             * overlay every time synchronization
-             * refreshes local data.
-             */
-            state.items =
-              action.payload;
-          },
-        );
-
-
-        builder.addCase(
-
-          refreshTasks.rejected,
-
-          (
-            state,
-            action,
-          ) => {
-
-            /*
-             * Refresh failure should not destroy
-             * the currently visible task list.
-             *
-             * Keep the existing state and only
-             * record the error.
-             */
-            state.error =
-              action.payload as string;
-          },
-        );
-
-
-        /* ============================================= */
-        /* ADD TASK                                      */
-        /* ============================================= */
-
-        builder.addCase(
-
-          addTask.pending,
-
-          state => {
-
-            state.status =
-              'loading';
-
-            state.operation =
-              'create';
-
-            state.error =
-              null;
-          },
-        );
-
-
-        builder.addCase(
-
-          addTask.fulfilled,
-
-          (
-            state,
-            action,
-          ) => {
-
-            state.items.unshift(
-              action.payload,
-            );
-
-            state.status =
-              'success';
-
-            state.operation =
-              null;
-
-            state.error =
-              null;
-          },
-        );
-
-
-        builder.addCase(
-
-          addTask.rejected,
-
-          (
-            state,
-            action,
-          ) => {
-
-            state.status =
-              'error';
-
-            state.operation =
-              null;
-
-            state.error =
-              action.payload as string;
-          },
-        );
-
-
-        /* ============================================= */
-        /* UPDATE TASK                                   */
-        /* ============================================= */
-
-        builder.addCase(
-
-          updateTask.pending,
-
-          state => {
-
-            state.status =
-              'loading';
-
-            state.operation =
-              'update';
-
-            state.error =
-              null;
-          },
-        );
-
-
-        builder.addCase(
-
-          updateTask.fulfilled,
-
-          (
-            state,
-            action,
-          ) => {
-
-            const index =
-              state.items.findIndex(
-
-                item =>
-                  item.id ===
-                  action.payload.id,
-
-              );
-
-
-            if (
-              index !== -1
-            ) {
-
-              state.items[index] =
-                action.payload;
-            }
-
-
-            state.status =
-              'success';
-
-            state.operation =
-              null;
-
-            state.error =
-              null;
-          },
-        );
-
-
-        builder.addCase(
-
-          updateTask.rejected,
-
-          (
-            state,
-            action,
-          ) => {
-
-            state.status =
-              'error';
-
-            state.operation =
-              null;
-
-            state.error =
-              action.payload as string;
-          },
-        );
-
-
-        /* ============================================= */
-        /* TOGGLE TASK                                   */
-        /* ============================================= */
-
-        builder.addCase(
-
-          toggleTask.pending,
-
-          state => {
-
-            state.status =
-              'loading';
-
-            state.operation =
-              'toggle';
-
-            state.error =
-              null;
-          },
-        );
-
-
-        builder.addCase(
-
-          toggleTask.fulfilled,
-
-          (
-            state,
-            action,
-          ) => {
-
-            const index =
-              state.items.findIndex(
-
-                item =>
-                  item.id ===
-                  action.payload.id,
-
-              );
-
-
-            if (
-              index !== -1
-            ) {
-
-              state.items[index] =
-                action.payload;
-            }
-
-
-            state.status =
-              'success';
-
-            state.operation =
-              null;
-          },
-        );
-
-
-        builder.addCase(
-
-          toggleTask.rejected,
-
-          (
-            state,
-            action,
-          ) => {
-
-            state.status =
-              'error';
-
-            state.operation =
-              null;
-
-            state.error =
-              action.payload as string;
-          },
-        );
-
-
-        /* ============================================= */
-        /* DELETE TASK                                   */
-        /* ============================================= */
-
-        builder.addCase(
-
-          deleteTask.pending,
-
-          state => {
-
-            state.status =
-              'loading';
-
-            state.operation =
-              'delete';
-
-            state.error =
-              null;
-          },
-        );
-
-
-        builder.addCase(
-
-          deleteTask.fulfilled,
-
-          (
-            state,
-            action,
-          ) => {
-
-            state.items =
-              state.items.filter(
-
-                task =>
-                  task.id !==
-                  action.payload,
-
-              );
-
-
-            state.status =
-              'success';
-
-            state.operation =
-              null;
-
-            state.error =
-              null;
-          },
-        );
-
-
-        builder.addCase(
-
-          deleteTask.rejected,
-
-          (
-            state,
-            action,
-          ) => {
-
-            state.status =
-              'error';
-
-            state.operation =
-              null;
-
-            state.error =
-              action.payload as string;
-          },
-        );
+        state.error = null;
       },
-  });
+    );
 
+    builder.addCase(
+      loadTasks.fulfilled,
+
+      (state, action) => {
+        state.items = action.payload;
+
+        state.status = 'success';
+
+        state.operation = null;
+
+        state.error = null;
+      },
+    );
+
+    builder.addCase(
+      loadTasks.rejected,
+
+      (state, action) => {
+        state.status = 'error';
+
+        state.operation = null;
+
+        state.error = action.payload as string;
+      },
+    );
+
+    /* ============================================= */
+    /* REFRESH TASKS                                 */
+    /* ============================================= */
+
+    builder.addCase(
+      refreshTasks.fulfilled,
+
+      (state, action) => {
+        /*
+         * IMPORTANT:
+         *
+         * Do NOT set status to loading.
+         *
+         * The user should not see a loading
+         * overlay every time synchronization
+         * refreshes local data.
+         */
+        state.items = action.payload;
+      },
+    );
+
+    builder.addCase(
+      refreshTasks.rejected,
+
+      (state, action) => {
+        /*
+         * Refresh failure should not destroy
+         * the currently visible task list.
+         *
+         * Keep the existing state and only
+         * record the error.
+         */
+        state.error = action.payload as string;
+      },
+    );
+
+    /* ============================================= */
+    /* ADD TASK                                      */
+    /* ============================================= */
+
+    builder.addCase(
+      addTask.pending,
+
+      state => {
+        state.status = 'loading';
+
+        state.operation = 'create';
+
+        state.error = null;
+      },
+    );
+
+    builder.addCase(
+      addTask.fulfilled,
+
+      (state, action) => {
+        state.items.unshift(action.payload);
+
+        state.status = 'success';
+
+        state.operation = null;
+
+        state.error = null;
+      },
+    );
+
+    builder.addCase(
+      addTask.rejected,
+
+      (state, action) => {
+        state.status = 'error';
+
+        state.operation = null;
+
+        state.error = action.payload as string;
+      },
+    );
+
+    /* ============================================= */
+    /* UPDATE TASK                                   */
+    /* ============================================= */
+
+    builder.addCase(
+      updateTask.pending,
+
+      state => {
+        state.status = 'loading';
+
+        state.operation = 'update';
+
+        state.error = null;
+      },
+    );
+
+    builder.addCase(
+      updateTask.fulfilled,
+
+      (state, action) => {
+        const index = state.items.findIndex(
+          item => item.id === action.payload.id,
+        );
+
+        if (index !== -1) {
+          state.items[index] = action.payload;
+        }
+
+        state.status = 'success';
+
+        state.operation = null;
+
+        state.error = null;
+      },
+    );
+
+    builder.addCase(
+      updateTask.rejected,
+
+      (state, action) => {
+        state.status = 'error';
+
+        state.operation = null;
+
+        state.error = action.payload as string;
+      },
+    );
+
+    /* ============================================= */
+    /* TOGGLE TASK                                   */
+    /* ============================================= */
+
+    builder.addCase(
+      toggleTask.pending,
+
+      state => {
+        state.status = 'loading';
+
+        state.operation = 'toggle';
+
+        state.error = null;
+      },
+    );
+
+    builder.addCase(
+      toggleTask.fulfilled,
+
+      (state, action) => {
+        const index = state.items.findIndex(
+          item => item.id === action.payload.id,
+        );
+
+        if (index !== -1) {
+          state.items[index] = action.payload;
+        }
+
+        state.status = 'success';
+
+        state.operation = null;
+      },
+    );
+
+    builder.addCase(
+      toggleTask.rejected,
+
+      (state, action) => {
+        state.status = 'error';
+
+        state.operation = null;
+
+        state.error = action.payload as string;
+      },
+    );
+
+    /* ============================================= */
+    /* DELETE TASK                                   */
+    /* ============================================= */
+
+    builder.addCase(
+      deleteTask.pending,
+
+      state => {
+        state.status = 'loading';
+
+        state.operation = 'delete';
+
+        state.error = null;
+      },
+    );
+
+    builder.addCase(
+      deleteTask.fulfilled,
+
+      (state, action) => {
+        state.items = state.items.filter(task => task.id !== action.payload);
+
+        state.status = 'success';
+
+        state.operation = null;
+
+        state.error = null;
+      },
+    );
+
+    builder.addCase(
+      deleteTask.rejected,
+
+      (state, action) => {
+        state.status = 'error';
+
+        state.operation = null;
+
+        state.error = action.payload as string;
+      },
+    );
+  },
+});
 
 /* ================================================= */
 /* ACTIONS                                           */
 /* ================================================= */
 
-export const {
-  setFilter,
-  clearTaskError,
-} = taskSlice.actions;
-
+export const { setFilter, clearTaskError } = taskSlice.actions;
 
 /* ================================================= */
 /* REDUCER                                           */
@@ -1021,23 +655,14 @@ export const {
 
 export default taskSlice.reducer;
 
-
 /* ================================================= */
 /* ERROR HELPER                                      */
 /* ================================================= */
 
-function getErrorMessage(
-  error: unknown,
-): string {
-
-  if (
-    error instanceof Error
-  ) {
-
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
     return error.message;
   }
 
-  return (
-    'Something went wrong while processing the task.'
-  );
+  return 'Something went wrong while processing the task.';
 }

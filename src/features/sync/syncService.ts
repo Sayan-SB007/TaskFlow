@@ -8,30 +8,17 @@ import {
   setDoc,
 } from 'firebase/firestore';
 
-import {
-  firebaseAuth,
-  firestoreDb,
-} from '../../config/firebase';
+import { firebaseAuth, firestoreDb } from '../../config/firebase';
 
-import type {
-  Task,
-} from '../tasks/types';
+import type { Task } from '../tasks/types';
 
-import {
-  taskRepository,
-} from '../../database/repositories/taskRepository';
-
+import { taskRepository } from '../../database/repositories/taskRepository';
 
 /* ================================================= */
 /* SYNC STATUS                                       */
 /* ================================================= */
 
-export type SyncStatus =
-  | 'offline'
-  | 'syncing'
-  | 'synced'
-  | 'error';
-
+export type SyncStatus = 'offline' | 'syncing' | 'synced' | 'error';
 
 export interface SyncStatusState {
   status: SyncStatus;
@@ -43,7 +30,6 @@ export interface SyncStatusState {
   message?: string;
 }
 
-
 let syncStatus: SyncStatusState = {
   status: 'synced',
 
@@ -52,41 +38,26 @@ let syncStatus: SyncStatusState = {
   isConnected: true,
 };
 
-
-const syncStatusListeners =
-  new Set<
-    (
-      state: SyncStatusState,
-    ) => void
-  >();
-
+const syncStatusListeners = new Set<(state: SyncStatusState) => void>();
 
 function notifySyncStatus() {
   const state = {
     ...syncStatus,
   };
 
-  syncStatusListeners.forEach(
-    listener => {
-      listener(state);
-    },
-  );
+  syncStatusListeners.forEach(listener => {
+    listener(state);
+  });
 }
-
 
 /* ================================================= */
 /* STATUS SUBSCRIPTION                               */
 /* ================================================= */
 
 export function subscribeSyncStatus(
-  listener: (
-    state: SyncStatusState,
-  ) => void,
+  listener: (state: SyncStatusState) => void,
 ): () => void {
-
-  syncStatusListeners.add(
-    listener,
-  );
+  syncStatusListeners.add(listener);
 
   /*
    * Immediately provide the
@@ -97,21 +68,15 @@ export function subscribeSyncStatus(
   });
 
   return () => {
-    syncStatusListeners.delete(
-      listener,
-    );
+    syncStatusListeners.delete(listener);
   };
 }
-
 
 /* ================================================= */
 /* UPDATE STATUS                                     */
 /* ================================================= */
 
-function setSyncStatus(
-  update: Partial<SyncStatusState>,
-) {
-
+function setSyncStatus(update: Partial<SyncStatusState>) {
   syncStatus = {
     ...syncStatus,
     ...update,
@@ -120,98 +85,70 @@ function setSyncStatus(
   notifySyncStatus();
 }
 
-
 /* ================================================= */
 /* PENDING COUNT                                     */
 /* ================================================= */
 
 async function refreshPendingCount(): Promise<number> {
-
   try {
+    const pendingTasks = await taskRepository.getPendingTasks();
 
-    const pendingTasks =
-      await taskRepository.getPendingTasks();
-
-    const count =
-      pendingTasks.length;
+    const count = pendingTasks.length;
 
     setSyncStatus({
       pendingCount: count,
     });
 
     return count;
-
   } catch (error) {
-
-    console.error(
-      'SYNC: Unable to read pending count.',
-      error,
-    );
+    console.error('SYNC: Unable to read pending count.', error);
 
     return syncStatus.pendingCount;
   }
 }
-
 
 /* ================================================= */
 /* FIRESTORE TASK COLLECTION                         */
 /* ================================================= */
 
 function getTasksCollection() {
-
-  const user =
-    firebaseAuth.currentUser;
+  const user = firebaseAuth.currentUser;
 
   if (!user) {
     return null;
   }
 
-  return collection(
-    firestoreDb,
-    'users',
-    user.uid,
-    'tasks',
-  );
+  return collection(firestoreDb, 'users', user.uid, 'tasks');
 }
-
 
 /* ================================================= */
 /* PUSH LOCAL → FIRESTORE                            */
 /* ================================================= */
 
 async function pushPendingTasks(): Promise<void> {
-
-  const user =
-    firebaseAuth.currentUser;
+  const user = firebaseAuth.currentUser;
 
   if (!user) {
     return;
   }
 
-  const tasksCollection =
-    getTasksCollection();
+  const tasksCollection = getTasksCollection();
 
   if (!tasksCollection) {
     return;
   }
 
-  const pendingTasks =
-    await taskRepository.getPendingTasks();
+  const pendingTasks = await taskRepository.getPendingTasks();
 
   setSyncStatus({
-    pendingCount:
-      pendingTasks.length,
+    pendingCount: pendingTasks.length,
   });
 
-  if (
-    pendingTasks.length === 0
-  ) {
+  if (pendingTasks.length === 0) {
     return;
   }
 
-  console.log(
-    `SYNC: ${pendingTasks.length} pending task(s).`,
-  );
+  console.log(`SYNC: ${pendingTasks.length} pending task(s).`);
 
   /*
    * Process the current pending snapshot.
@@ -220,26 +157,14 @@ async function pushPendingTasks(): Promise<void> {
    * running will remain pending and can be
    * picked up by the next sync cycle.
    */
-  for (
-    const task of pendingTasks
-  ) {
-
+  for (const task of pendingTasks) {
     try {
+      await syncTaskToFirestore(task, tasksCollection);
 
-      await syncTaskToFirestore(
-        task,
-        tasksCollection,
-      );
-
-      await taskRepository.markSynced(
-        task.id,
-      );
+      await taskRepository.markSynced(task.id);
 
       if (task.deletedAt) {
-
-        await taskRepository.removeDeletedTask(
-          task.id,
-        );
+        await taskRepository.removeDeletedTask(task.id);
       }
 
       /*
@@ -249,34 +174,24 @@ async function pushPendingTasks(): Promise<void> {
        * This is useful for the offline/reconnect
        * UI, but the normal online UI remains silent.
        */
-      const remaining =
-        await taskRepository.getPendingTasks();
+      const remaining = await taskRepository.getPendingTasks();
 
       setSyncStatus({
-        pendingCount:
-          remaining.length,
+        pendingCount: remaining.length,
       });
 
-      console.log(
-        `SYNC: ${task.id} synced.`,
-      );
-
+      console.log(`SYNC: ${task.id} synced.`);
     } catch (error) {
-
       /*
        * Do NOT mark the task as synced.
        *
        * It remains pending in SQLite and
        * can be retried later.
        */
-      console.error(
-        `SYNC: Failed ${task.id}`,
-        error,
-      );
+      console.error(`SYNC: Failed ${task.id}`, error);
     }
   }
 }
-
 
 /* ================================================= */
 /* SYNC TASK TO FIRESTORE                            */
@@ -285,31 +200,19 @@ async function pushPendingTasks(): Promise<void> {
 async function syncTaskToFirestore(
   task: Task,
 
-  tasksCollection: ReturnType<
-    typeof collection
-  >,
+  tasksCollection: ReturnType<typeof collection>,
 ): Promise<void> {
-
-  const taskRef =
-    doc(
-      tasksCollection,
-      task.id,
-    );
-
+  const taskRef = doc(tasksCollection, task.id);
 
   /* ================================================= */
   /* DELETE                                            */
   /* ================================================= */
 
   if (task.deletedAt) {
-
-    await deleteDoc(
-      taskRef,
-    );
+    await deleteDoc(taskRef);
 
     return;
   }
-
 
   /* ================================================= */
   /* CREATE / UPDATE                                   */
@@ -318,36 +221,25 @@ async function syncTaskToFirestore(
   await setDoc(
     taskRef,
     {
-      id:
-        task.id,
+      id: task.id,
 
-      title:
-        task.title,
+      title: task.title,
 
-      description:
-        task.description ?? '',
+      description: task.description ?? '',
 
-      dueDate:
-        task.dueDate,
+      dueDate: task.dueDate,
 
-      dueTime:
-        task.dueTime ?? '',
+      dueTime: task.dueTime ?? '',
 
-      priority:
-        task.priority,
+      priority: task.priority,
 
-      status:
-        task.status,
+      status: task.status,
 
-      createdAt:
-        task.createdAt,
+      createdAt: task.createdAt,
 
-      updatedAt:
-        task.updatedAt,
+      updatedAt: task.updatedAt,
 
-      userId:
-        firebaseAuth.currentUser
-          ?.uid ?? null,
+      userId: firebaseAuth.currentUser?.uid ?? null,
     },
     {
       merge: true,
@@ -355,163 +247,93 @@ async function syncTaskToFirestore(
   );
 }
 
-
 /* ================================================= */
 /* PULL FIRESTORE → SQLITE                           */
 /* ================================================= */
 
 async function pullRemoteTasks(): Promise<void> {
-
-  const user =
-    firebaseAuth.currentUser;
+  const user = firebaseAuth.currentUser;
 
   if (!user) {
     return;
   }
 
-  const tasksCollection =
-    getTasksCollection();
+  const tasksCollection = getTasksCollection();
 
   if (!tasksCollection) {
     return;
   }
 
-  const snapshot =
-    await getDocs(
-      tasksCollection,
-    );
+  const snapshot = await getDocs(tasksCollection);
 
   if (snapshot.empty) {
-
-    console.log(
-      'SYNC: No remote tasks found.',
-    );
+    console.log('SYNC: No remote tasks found.');
 
     return;
   }
 
   let imported = 0;
 
-  for (
-    const firestoreDoc of snapshot.docs
-  ) {
-
-    const data =
-      firestoreDoc.data();
+  for (const firestoreDoc of snapshot.docs) {
+    const data = firestoreDoc.data();
 
     const remoteTask: Task = {
+      id: String(data.id ?? firestoreDoc.id),
 
-      id:
-        String(
-          data.id ??
-          firestoreDoc.id,
-        ),
+      title: String(data.title ?? ''),
 
-      title:
-        String(
-          data.title ?? '',
-        ),
+      description: typeof data.description === 'string' ? data.description : '',
 
-      description:
-        typeof data.description ===
-        'string'
-          ? data.description
-          : '',
+      dueDate: String(data.dueDate ?? ''),
 
-      dueDate:
-        String(
-          data.dueDate ?? '',
-        ),
+      dueTime: typeof data.dueTime === 'string' ? data.dueTime : '',
 
-      dueTime:
-        typeof data.dueTime ===
-        'string'
-          ? data.dueTime
-          : '',
+      priority: normalizePriority(data.priority),
 
-      priority:
-        normalizePriority(
-          data.priority,
-        ),
+      status: normalizeStatus(data.status),
 
-      status:
-        normalizeStatus(
-          data.status,
-        ),
+      createdAt: String(data.createdAt ?? new Date().toISOString()),
 
-      createdAt:
-        String(
-          data.createdAt ??
-          new Date().toISOString(),
-        ),
-
-      updatedAt:
-        String(
-          data.updatedAt ??
-          new Date().toISOString(),
-        ),
+      updatedAt: String(data.updatedAt ?? new Date().toISOString()),
     };
 
-    await taskRepository.upsertRemoteTask(
-      remoteTask,
-    );
+    await taskRepository.upsertRemoteTask(remoteTask);
 
     imported += 1;
   }
 
-  console.log(
-    `SYNC: ${imported} remote task(s) processed.`,
-  );
+  console.log(`SYNC: ${imported} remote task(s) processed.`);
 }
-
 
 /* ================================================= */
 /* NORMALIZE PRIORITY                                */
 /* ================================================= */
 
-function normalizePriority(
-  value: unknown,
-): Task['priority'] {
-
-  if (
-    value === 'low' ||
-    value === 'medium' ||
-    value === 'high'
-  ) {
-
+function normalizePriority(value: unknown): Task['priority'] {
+  if (value === 'low' || value === 'medium' || value === 'high') {
     return value;
   }
 
   return 'medium';
 }
 
-
 /* ================================================= */
 /* NORMALIZE STATUS                                  */
 /* ================================================= */
 
-function normalizeStatus(
-  value: unknown,
-): Task['status'] {
-
-  if (
-    value === 'pending' ||
-    value === 'completed'
-  ) {
-
+function normalizeStatus(value: unknown): Task['status'] {
+  if (value === 'pending' || value === 'completed') {
     return value;
   }
 
   return 'pending';
 }
 
-
 /* ================================================= */
 /* SYNC LOCK                                         */
 /* ================================================= */
 
 let syncing = false;
-
 
 /* ================================================= */
 /* SYNC SCHEDULER                                    */
@@ -533,88 +355,54 @@ let syncing = false;
  */
 const SYNC_DEBOUNCE_MS = 400;
 
+let scheduledSyncTimer: ReturnType<typeof setTimeout> | null = null;
 
-let scheduledSyncTimer:
-  ReturnType<typeof setTimeout> | null =
-  null;
+let scheduledSyncPromise: Promise<void> | null = null;
 
-
-let scheduledSyncPromise:
-  Promise<void> | null =
-  null;
-
-
-let scheduledSyncResolve:
-  (() => void) | null =
-  null;
-
+let scheduledSyncResolve: (() => void) | null = null;
 
 function scheduleBackgroundSync(): Promise<void> {
-
   /*
    * If a sync has already been scheduled,
    * don't create another timer.
    */
-  if (
-    scheduledSyncPromise
-  ) {
-
+  if (scheduledSyncPromise) {
     return scheduledSyncPromise;
   }
 
+  scheduledSyncPromise = new Promise<void>(resolve => {
+    scheduledSyncResolve = resolve;
+  });
 
-  scheduledSyncPromise =
-    new Promise<void>(
-      resolve => {
+  scheduledSyncTimer = setTimeout(
+    () => {
+      scheduledSyncTimer = null;
 
-        scheduledSyncResolve =
-          resolve;
-      },
-    );
+      void syncPendingTasks({
+        showOnlineStatus: false,
+        refreshTasksAfterSync: false,
+      }).finally(() => {
+        const resolve = scheduledSyncResolve;
 
+        scheduledSyncResolve = null;
 
-  scheduledSyncTimer =
-    setTimeout(
-      () => {
+        scheduledSyncPromise = null;
 
-        scheduledSyncTimer =
-          null;
+        resolve?.();
+      });
+    },
 
-        void syncPendingTasks({
-          showOnlineStatus: false,
-          refreshTasksAfterSync: false,
-        })
-          .finally(() => {
-
-            const resolve =
-              scheduledSyncResolve;
-
-            scheduledSyncResolve =
-              null;
-
-            scheduledSyncPromise =
-              null;
-
-            resolve?.();
-
-          });
-
-      },
-
-      SYNC_DEBOUNCE_MS,
-    );
-
+    SYNC_DEBOUNCE_MS,
+  );
 
   return scheduledSyncPromise;
 }
-
 
 /* ================================================= */
 /* FULL SYNC                                         */
 /* ================================================= */
 
 interface SyncOptions {
-
   /*
    * true:
    * Show "Syncing..." / "All changes synced".
@@ -640,130 +428,85 @@ interface SyncOptions {
   onTasksChanged?: () => void;
 }
 
-
-async function syncPendingTasks(
-  options: SyncOptions = {},
-): Promise<void> {
-
+async function syncPendingTasks(options: SyncOptions = {}): Promise<void> {
   if (syncing) {
     return;
   }
 
-  const user =
-    firebaseAuth.currentUser;
+  const user = firebaseAuth.currentUser;
 
   if (!user) {
-
-    console.log(
-      'SYNC: No authenticated user.',
-    );
+    console.log('SYNC: No authenticated user.');
 
     return;
   }
 
   try {
-
     syncing = true;
 
+    const network = await NetInfo.fetch();
 
-    const network =
-      await NetInfo.fetch();
-
-
-    const isConnected =
-      network.isConnected === true;
-
+    const isConnected = network.isConnected === true;
 
     setSyncStatus({
       isConnected,
     });
-
 
     /* ================================================= */
     /* OFFLINE                                           */
     /* ================================================= */
 
     if (!isConnected) {
-
-      const pendingCount =
-        await refreshPendingCount();
-
+      const pendingCount = await refreshPendingCount();
 
       setSyncStatus({
+        status: 'offline',
 
-        status:
-          'offline',
-
-        isConnected:
-          false,
+        isConnected: false,
 
         pendingCount,
 
         message:
           pendingCount > 0
             ? `${pendingCount} change${
-                pendingCount === 1
-                  ? ''
-                  : 's'
+                pendingCount === 1 ? '' : 's'
               } waiting to sync`
             : 'Changes will sync when you are back online',
       });
 
-
-      console.log(
-        'SYNC: Device is offline.',
-      );
-
+      console.log('SYNC: Device is offline.');
 
       return;
     }
-
 
     /* ================================================= */
     /* ONLINE STATUS                                     */
     /* ================================================= */
 
-    if (
-      options.showOnlineStatus
-    ) {
-
+    if (options.showOnlineStatus) {
       setSyncStatus({
+        status: 'syncing',
 
-        status:
-          'syncing',
+        isConnected: true,
 
-        isConnected:
-          true,
-
-        message:
-          'Syncing your changes...',
+        message: 'Syncing your changes...',
       });
-
     } else {
-
       /*
        * Normal background sync.
        *
        * Keep the UI silent.
        */
       setSyncStatus({
+        isConnected: true,
 
-        isConnected:
-          true,
+        status: 'syncing',
 
-        status:
-          'syncing',
-
-        message:
-          undefined,
+        message: undefined,
       });
     }
 
-
-    console.log(
-      'SYNC: Online. Starting sync...',
-    );
-
+    console.log('SYNC: Online. Starting sync...');
 
     /* ================================================= */
     /* PUSH LOCAL → FIRESTORE                            */
@@ -771,21 +514,17 @@ async function syncPendingTasks(
 
     await pushPendingTasks();
 
-
     /* ================================================= */
     /* PULL FIRESTORE → SQLITE                           */
     /* ================================================= */
 
     await pullRemoteTasks();
 
-
     /* ================================================= */
     /* REFRESH PENDING COUNT                             */
     /* ================================================= */
 
-    const pendingCount =
-      await refreshPendingCount();
-
+    const pendingCount = await refreshPendingCount();
 
     /* ================================================= */
     /* REFRESH REDUX                                     */
@@ -799,109 +538,69 @@ async function syncPendingTasks(
      * so doing loadTasks() after every background
      * sync would be unnecessary work.
      */
-    if (
-      options.refreshTasksAfterSync &&
-      options.onTasksChanged
-    ) {
-
+    if (options.refreshTasksAfterSync && options.onTasksChanged) {
       options.onTasksChanged();
     }
-
 
     /* ================================================= */
     /* FINAL STATUS                                      */
     /* ================================================= */
 
-    if (
-      options.showOnlineStatus
-    ) {
-
+    if (options.showOnlineStatus) {
       setSyncStatus({
+        status: 'synced',
 
-        status:
-          'synced',
-
-        isConnected:
-          true,
+        isConnected: true,
 
         pendingCount,
 
         message:
           pendingCount > 0
             ? `${pendingCount} change${
-                pendingCount === 1
-                  ? ''
-                  : 's'
+                pendingCount === 1 ? '' : 's'
               } waiting to sync`
             : 'All changes synced',
       });
-
     } else {
-
       /*
        * Background online sync remains silent.
        */
       setSyncStatus({
+        status: 'synced',
 
-        status:
-          'synced',
-
-        isConnected:
-          true,
+        isConnected: true,
 
         pendingCount,
 
-        message:
-          undefined,
+        message: undefined,
       });
     }
 
-
-    console.log(
-      'SYNC: Completed.',
-    );
-
+    console.log('SYNC: Completed.');
   } catch (error) {
+    console.error('SYNC ERROR:', error);
 
-    console.error(
-      'SYNC ERROR:',
-      error,
-    );
-
-
-    const pendingCount =
-      await refreshPendingCount();
-
+    const pendingCount = await refreshPendingCount();
 
     setSyncStatus({
-
-      status:
-        'error',
+      status: 'error',
 
       pendingCount,
 
-      isConnected:
-        syncStatus.isConnected,
+      isConnected: syncStatus.isConnected,
 
-      message:
-        'Sync failed. We will retry automatically.',
+      message: 'Sync failed. We will retry automatically.',
     });
-
   } finally {
-
     syncing = false;
   }
 }
-
 
 /* ================================================= */
 /* START LISTENER                                    */
 /* ================================================= */
 
-export function startSyncListener(
-  onTasksChanged?: () => void,
-): () => void {
-
+export function startSyncListener(onTasksChanged?: () => void): () => void {
   /*
    * Initial synchronization.
    *
@@ -911,151 +610,103 @@ export function startSyncListener(
    * then Redux reloads from SQLite.
    */
   void syncPendingTasks({
+    showOnlineStatus: false,
 
-    showOnlineStatus:
-      false,
-
-    refreshTasksAfterSync:
-      true,
+    refreshTasksAfterSync: true,
 
     onTasksChanged,
   });
-
 
   /* ================================================= */
   /* NETWORK LISTENER                                  */
   /* ================================================= */
 
-  const unsubscribe =
-    NetInfo.addEventListener(
-      state => {
+  const unsubscribe = NetInfo.addEventListener(state => {
+    const isConnected = state.isConnected === true;
 
-        const isConnected =
-          state.isConnected === true;
+    /* ============================================= */
+    /* OFFLINE                                       */
+    /* ============================================= */
 
-
-        /* ============================================= */
-        /* OFFLINE                                       */
-        /* ============================================= */
-
-        if (!isConnected) {
-
-          void refreshPendingCount()
-            .then(
-              pendingCount => {
-
-                setSyncStatus({
-
-                  status:
-                    'offline',
-
-                  isConnected:
-                    false,
-
-                  pendingCount,
-
-                  message:
-                    pendingCount > 0
-                      ? `${pendingCount} change${
-                          pendingCount === 1
-                            ? ''
-                            : 's'
-                        } waiting to sync`
-                      : 'Changes will sync when you are back online',
-                });
-
-              },
-            );
-
-          return;
-        }
-
-
-        /* ============================================= */
-        /* ONLINE / RECONNECTED                          */
-        /* ============================================= */
-
-        /*
-         * Reconnection is different from a normal
-         * online task operation.
-         *
-         * Here we DO show a useful status message.
-         */
+    if (!isConnected) {
+      void refreshPendingCount().then(pendingCount => {
         setSyncStatus({
+          status: 'offline',
 
-          isConnected:
-            true,
+          isConnected: false,
 
-          status:
-            'syncing',
+          pendingCount,
 
           message:
-            'Back online · Syncing...',
+            pendingCount > 0
+              ? `${pendingCount} change${
+                  pendingCount === 1 ? '' : 's'
+                } waiting to sync`
+              : 'Changes will sync when you are back online',
         });
+      });
 
+      return;
+    }
 
-        /*
-         * Run immediately on reconnection.
-         *
-         * No debounce here because the network
-         * transition itself is the trigger.
-         */
-        void syncPendingTasks({
+    /* ============================================= */
+    /* ONLINE / RECONNECTED                          */
+    /* ============================================= */
 
-          showOnlineStatus:
-            true,
+    /*
+     * Reconnection is different from a normal
+     * online task operation.
+     *
+     * Here we DO show a useful status message.
+     */
+    setSyncStatus({
+      isConnected: true,
 
-          refreshTasksAfterSync:
-            true,
+      status: 'syncing',
 
-          onTasksChanged,
-        });
+      message: 'Back online · Syncing...',
+    });
 
-      },
-    );
+    /*
+     * Run immediately on reconnection.
+     *
+     * No debounce here because the network
+     * transition itself is the trigger.
+     */
+    void syncPendingTasks({
+      showOnlineStatus: true,
 
+      refreshTasksAfterSync: true,
+
+      onTasksChanged,
+    });
+  });
 
   return () => {
-
     unsubscribe();
-
 
     /*
      * Cancel a scheduled background sync
      * when the authenticated sync lifecycle
      * is being stopped.
      */
-    if (
-      scheduledSyncTimer
-    ) {
+    if (scheduledSyncTimer) {
+      clearTimeout(scheduledSyncTimer);
 
-      clearTimeout(
-        scheduledSyncTimer,
-      );
-
-      scheduledSyncTimer =
-        null;
+      scheduledSyncTimer = null;
     }
 
+    if (scheduledSyncResolve) {
+      const resolve = scheduledSyncResolve;
 
-    if (
-      scheduledSyncResolve
-    ) {
+      scheduledSyncResolve = null;
 
-      const resolve =
-        scheduledSyncResolve;
-
-      scheduledSyncResolve =
-        null;
-
-      scheduledSyncPromise =
-        null;
+      scheduledSyncPromise = null;
 
       resolve();
     }
   };
 }
-
 
 /* ================================================= */
 /* BACKGROUND SYNC                                   */
@@ -1073,10 +724,8 @@ export function startSyncListener(
  * by one synchronization cycle.
  */
 export async function syncTasks(): Promise<void> {
-
   await scheduleBackgroundSync();
 }
-
 
 /* ================================================= */
 /* MANUAL / IMMEDIATE SYNC                           */
@@ -1091,26 +740,20 @@ export async function syncTasks(): Promise<void> {
 export async function forceSyncTasks(
   onTasksChanged?: () => void,
 ): Promise<void> {
-
   await syncPendingTasks({
+    showOnlineStatus: true,
 
-    showOnlineStatus:
-      true,
-
-    refreshTasksAfterSync:
-      true,
+    refreshTasksAfterSync: true,
 
     onTasksChanged,
   });
 }
-
 
 /* ================================================= */
 /* GET CURRENT STATUS                                */
 /* ================================================= */
 
 export function getSyncStatus(): SyncStatusState {
-
   return {
     ...syncStatus,
   };

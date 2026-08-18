@@ -1,16 +1,8 @@
-export type TaskPriority =
-  | 'low'
-  | 'medium'
-  | 'high';
+export type TaskPriority = 'low' | 'medium' | 'high';
 
-export type TaskStatus =
-  | 'pending'
-  | 'completed';
+export type TaskStatus = 'pending' | 'completed';
 
-export type TaskFilter =
-  | 'all'
-  | 'today'
-  | 'upcoming';
+export type TaskFilter = 'all' | 'today' | 'upcoming';
 
 export interface Task {
   id: string;
