@@ -6,23 +6,32 @@ export const db = open({
   name: 'taskflow.sqlite',
 });
 
-let initialized = false;
+/**
+ * Database initialization lock.
+ *
+ * Important:
+ * Multiple parts of the app can call initializeDatabase()
+ * at the same time.
+ *
+ * Without this promise lock, two callers can both see
+ * initialized === false and execute the same migration.
+ */
+let initializationPromise: Promise<void> | null = null;
 
-export async function initializeDatabase() {
-  if (initialized) {
-    return db;
-  }
-
+async function runDatabaseInitialization(): Promise<void> {
   // Enable foreign-key enforcement.
   await db.execute(
     'PRAGMA foreign_keys = ON;',
   );
 
-  // Better durability/performance balance.
+  // WAL provides better concurrency and durability.
   await db.execute(
     'PRAGMA journal_mode = WAL;',
   );
 
+  /**
+   * Migration tracking table.
+   */
   await db.execute(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
       version INTEGER PRIMARY KEY NOT NULL,
@@ -30,20 +39,25 @@ export async function initializeDatabase() {
     );
   `);
 
-  const result = await db.execute(
-    `
-      SELECT version
-      FROM schema_migrations
-      ORDER BY version DESC
-      LIMIT 1;
-    `,
-  );
+  /**
+   * Find the latest migration already applied.
+   */
+  const result = await db.execute(`
+    SELECT
+      version
+    FROM schema_migrations
+    ORDER BY version DESC
+    LIMIT 1;
+  `);
 
   const currentVersion =
     result.rows.length > 0
       ? Number(result.rows[0].version)
       : 0;
 
+  /**
+   * Migration V1.
+   */
   if (currentVersion < 1) {
     await migrateV1(db);
 
@@ -55,11 +69,37 @@ export async function initializeDatabase() {
         )
         VALUES (?, ?);
       `,
-      [1, new Date().toISOString()],
+      [
+        1,
+        new Date().toISOString(),
+      ],
     );
   }
+}
 
-  initialized = true;
+/**
+ * Initialize the database exactly once.
+ *
+ * If several parts of the application call this function
+ * simultaneously, they all wait for the SAME Promise.
+ */
+export async function initializeDatabase() {
+  if (!initializationPromise) {
+    initializationPromise =
+      runDatabaseInitialization();
+  }
 
-  return db;
+  try {
+    await initializationPromise;
+
+    return db;
+  } catch (error) {
+    /**
+     * Allow another initialization attempt if the
+     * first initialization failed.
+     */
+    initializationPromise = null;
+
+    throw error;
+  }
 }
